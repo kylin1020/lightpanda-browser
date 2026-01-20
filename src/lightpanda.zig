@@ -22,6 +22,7 @@ pub const Server = @import("Server.zig");
 pub const Page = @import("browser/Page.zig");
 pub const Browser = @import("browser/Browser.zig");
 pub const Session = @import("browser/Session.zig");
+pub const profiles = @import("browser/profiles.zig");
 
 pub const log = @import("log.zig");
 pub const js = @import("browser/js/js.zig");

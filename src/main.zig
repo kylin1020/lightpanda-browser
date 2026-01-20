@@ -23,6 +23,7 @@ const Allocator = std.mem.Allocator;
 
 const log = lp.log;
 const App = lp.App;
+const profiles = lp.profiles;
 const SigHandler = @import("Sighandler.zig");
 pub const panic = lp.crash_handler.panic;
 
@@ -239,7 +240,19 @@ const Command = struct {
         };
     }
 
+    fn browser(self: *const Command) ?profiles.BrowserType {
+        return switch (self.mode) {
+            inline .serve, .fetch => |opts| opts.common.browser,
+            else => unreachable,
+        };
+    }
+
     fn fingerprintProfile(self: *const Command, arena: Allocator) !App.FingerprintProfile {
+        // Priority: --browser > --fingerprint_profile > default
+        if (self.browser()) |b| {
+            return profiles.getProfile(b);
+        }
+        
         const path = self.fingerprintProfilePath() orelse return App.FingerprintProfile.defaultMacOS();
         const file = try std.fs.cwd().openFile(path, .{});
         defer file.close();
@@ -287,6 +300,7 @@ const Command = struct {
         log_filter_scopes: ?[]log.Scope = null,
         user_agent_suffix: ?[]const u8 = null,
         fingerprint_profile_path: ?[]const u8 = null,
+        browser: ?profiles.BrowserType = null,
     };
 
     fn printUsageAndExit(self: *const Command, success: bool) void {
@@ -341,8 +355,17 @@ const Command = struct {
             \\--user_agent_suffix
             \\                Suffix to append to the Lightpanda/X.Y User-Agent
             \\
+            \\--browser       Browser profile to emulate (includes TLS fingerprint).
+            \\                Options: chrome131-macos, chrome131-windows, chrome131-linux,
+            \\                         chrome132-macos, chrome132-windows, chrome132-linux,
+            \\                         chrome124-macos, chrome124-windows
+            \\                Aliases: chrome131 (=chrome131-macos), chrome (=latest)
+            \\                Defaults to chrome131-macos if neither --browser nor
+            \\                --fingerprint_profile is specified.
+            \\
             \\--fingerprint_profile
-            \\                Path to fingerprint profile JSON (macOS default if omitted)
+            \\                Path to custom fingerprint profile JSON file.
+            \\                Overridden by --browser if both are specified.
             \\
         ;
 
@@ -780,6 +803,20 @@ fn parseCommonArg(
             return error.InvalidArgument;
         };
         common.fingerprint_profile_path = try allocator.dupe(u8, str);
+        return true;
+    }
+
+    if (std.mem.eql(u8, "--browser", opt)) {
+        const str = args.next() orelse {
+            log.fatal(.app, "missing argument value", .{ .arg = "--browser" });
+            return error.InvalidArgument;
+        };
+        common.browser = profiles.BrowserType.fromString(str) orelse {
+            log.fatal(.app, "invalid browser profile", .{ .arg = "--browser", .value = str });
+            log.info(.app, "available profiles", .{});
+            profiles.listProfiles();
+            return error.InvalidArgument;
+        };
         return true;
     }
 
