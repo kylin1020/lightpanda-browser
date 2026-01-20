@@ -29,8 +29,9 @@ pub const c = @cImport({
 pub extern fn curl_easy_impersonate(curl: *c.CURL, target: [*c]const u8, default_headers: c_int) c.CURLcode;
 
 pub const ENABLE_DEBUG = false;
-/// Set to true when building with libcurl-impersonate to enable TLS fingerprinting
-pub const ENABLE_IMPERSONATE = false;
+/// TLS fingerprinting via curl-impersonate is enabled
+/// curl-impersonate provides browser-like TLS/HTTP2 fingerprints
+pub const ENABLE_IMPERSONATE = true;
 pub const Client = @import("Client.zig");
 pub const Transfer = Client.Transfer;
 

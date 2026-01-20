@@ -410,21 +410,11 @@ fn addDependencies(b: *Build, mod: *Build.Module, opts: *Build.Step.Options, pre
 
         try buildZlib(b, mod);
         try buildBrotli(b, mod);
-        const boringssl_dep = b.dependency("boringssl-zig", .{
-            .target = target,
-            .optimize = mod.optimize.?,
-            .force_pic = true,
-        });
 
-        const ssl = boringssl_dep.artifact("ssl");
-        ssl.bundle_ubsan_rt = false;
-        const crypto = boringssl_dep.artifact("crypto");
-        crypto.bundle_ubsan_rt = false;
-
-        mod.linkLibrary(ssl);
-        mod.linkLibrary(crypto);
-        try buildNghttp2(b, mod);
-        try buildCurl(b, mod);
+        // Use curl-impersonate for TLS fingerprinting
+        // This requires running ./scripts/build-curl-impersonate.sh first
+        // curl-impersonate includes its own BoringSSL and nghttp2
+        try buildCurlImpersonate(b, mod, opts);
 
         switch (target.result.os.tag) {
             .macos => {
@@ -715,6 +705,40 @@ fn buildCurl(b: *Build, m: *Build.Module) !void {
             root ++ "lib/vtls/x509asn1.c",
         },
     });
+}
+
+fn buildCurlImpersonate(b: *Build, m: *Build.Module, opts: *Build.Step.Options) !void {
+    // Build curl-impersonate using external script (similar to html5ever's cargo build)
+    // curl-impersonate uses autotools and requires Go for BoringSSL
+    const curl_impersonate_argv: []const []const u8 = &.{
+        "bash",
+        "scripts/build-curl-impersonate.sh",
+        "build",
+    };
+
+    const curl_impersonate_build = b.addSystemCommand(curl_impersonate_argv);
+    const curl_impersonate_step = b.step("curl-impersonate", "Build curl-impersonate (requires Go, cmake, autoconf)");
+    curl_impersonate_step.dependOn(&curl_impersonate_build.step);
+    opts.step.dependOn(curl_impersonate_step);
+
+    // Link against the pre-built libcurl-impersonate
+    // The library is installed to .lp-cache/curl-impersonate/install/lib
+    const install_dir = b.pathFromRoot(".lp-cache/curl-impersonate/install");
+
+    // Add include paths for curl headers
+    m.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "include" }) });
+    // Also add the original curl headers as fallback
+    m.addIncludePath(b.path("vendor/curl-impersonate/curl/include"));
+
+    // Link the static library
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libcurl-impersonate-chrome.a" }) });
+
+    // curl-impersonate includes its own BoringSSL and nghttp2, link them too
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libssl.a" }) });
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libcrypto.a" }) });
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libnghttp2.a" }) });
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libbrotlidec.a" }) });
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libbrotlicommon.a" }) });
 }
 
 const Manifest = struct {
