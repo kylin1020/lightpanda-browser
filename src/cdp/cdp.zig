@@ -244,6 +244,7 @@ pub fn CDPT(comptime TypeProvider: type) type {
                     else => {},
                 },
                 11 => switch (@as(u88, @bitCast(domain[0..11].*))) {
+                    asUint(u88, "Fingerprint") => return @import("domains/fingerprint.zig").processMessage(command),
                     asUint(u88, "Performance") => return @import("domains/performance.zig").processMessage(command),
                     else => {},
                 },

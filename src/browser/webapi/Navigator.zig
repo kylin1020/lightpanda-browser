@@ -17,9 +17,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 const std = @import("std");
-const builtin = @import("builtin");
 const js = @import("../js/js.zig");
 const Page = @import("../Page.zig");
+const App = @import("../../App.zig");
+const Permissions = @import("Permissions.zig");
+const BatteryManager = @import("BatteryManager.zig");
 
 const Navigator = @This();
 _pad: bool = false,
@@ -27,7 +29,7 @@ _pad: bool = false,
 pub const init: Navigator = .{};
 
 pub fn getUserAgent(_: *const Navigator, page: *Page) []const u8 {
-    return page._session.browser.app.config.user_agent;
+    return page.fingerprintProfile().userAgent;
 }
 
 pub fn getAppName(_: *const Navigator) []const u8 {
@@ -42,22 +44,16 @@ pub fn getAppVersion(_: *const Navigator) []const u8 {
     return "1.0";
 }
 
-pub fn getPlatform(_: *const Navigator) []const u8 {
-    return switch (builtin.os.tag) {
-        .macos => "MacIntel",
-        .windows => "Win32",
-        .linux => "Linux x86_64",
-        .freebsd => "FreeBSD",
-        else => "Unknown",
-    };
+pub fn getPlatform(_: *const Navigator, page: *Page) []const u8 {
+    return page.fingerprintProfile().platform;
 }
 
-pub fn getLanguage(_: *const Navigator) []const u8 {
-    return "en-US";
+pub fn getLanguage(_: *const Navigator, page: *Page) []const u8 {
+    return page.fingerprintProfile().language;
 }
 
-pub fn getLanguages(_: *const Navigator) [1][]const u8 {
-    return .{"en-US"};
+pub fn getLanguages(_: *const Navigator, page: *Page) []const []const u8 {
+    return page.fingerprintProfile().languages;
 }
 
 pub fn getOnLine(_: *const Navigator) bool {
@@ -68,22 +64,22 @@ pub fn getCookieEnabled(_: *const Navigator) bool {
     return true;
 }
 
-pub fn getHardwareConcurrency(_: *const Navigator) u32 {
-    return 4;
+pub fn getHardwareConcurrency(_: *const Navigator, page: *Page) u32 {
+    return page.fingerprintProfile().hardwareConcurrency;
 }
 
-pub fn getMaxTouchPoints(_: *const Navigator) u32 {
-    return 0;
+pub fn getMaxTouchPoints(_: *const Navigator, page: *Page) u32 {
+    return page.fingerprintProfile().maxTouchPoints;
 }
 
 /// Returns the vendor name
-pub fn getVendor(_: *const Navigator) []const u8 {
-    return "";
+pub fn getVendor(_: *const Navigator, page: *Page) []const u8 {
+    return page.fingerprintProfile().vendor;
 }
 
 /// Returns the product name (typically "Gecko" for compatibility)
-pub fn getProduct(_: *const Navigator) []const u8 {
-    return "Gecko";
+pub fn getProduct(_: *const Navigator, page: *Page) []const u8 {
+    return page.fingerprintProfile().product;
 }
 
 /// Returns whether Java is enabled (always false)
@@ -94,6 +90,33 @@ pub fn javaEnabled(_: *const Navigator) bool {
 /// Returns whether the browser is controlled by automation (always false)
 pub fn getWebdriver(_: *const Navigator) bool {
     return false;
+}
+
+pub fn getUserAgentData(_: *const Navigator, page: *Page) App.FingerprintProfile.UserAgentData {
+    return page.fingerprintProfile().userAgentData;
+}
+
+pub fn getPlugins(_: *const Navigator) []const []const u8 {
+    return &.{};
+}
+
+pub fn getDeviceMemory(_: *const Navigator, page: *Page) u32 {
+    return page.fingerprintProfile().deviceMemory;
+}
+
+pub fn getConnection(_: *const Navigator, page: *Page) !*NetworkInformation {
+    return page._factory.create(NetworkInformation{ ._page = page });
+}
+
+pub fn getPermissions(_: *const Navigator, page: *Page) !*Permissions.Permissions {
+    return Permissions.Permissions.init(page);
+}
+
+pub fn getBattery(_: *const Navigator, page: *Page) !js.Promise {
+    const manager = try BatteryManager.BatteryManager.init(page);
+    const resolver = page.js.createPromiseResolver();
+    resolver.resolve("Navigator.getBattery", manager);
+    return resolver.promise();
 }
 
 pub fn registerProtocolHandler(_: *const Navigator, scheme: []const u8, url: [:0]const u8, page: *const Page) !void {
@@ -164,6 +187,54 @@ fn validateProtocolHandlerURL(url: [:0]const u8, page: *const Page) !void {
     }
 }
 
+pub fn registerTypes() []const type {
+    return &.{
+        Navigator,
+        NetworkInformation,
+    } ++ Permissions.registerTypes() ++ BatteryManager.registerTypes();
+}
+
+/// NetworkInformation API - provides connection information
+pub const NetworkInformation = struct {
+    _page: *Page,
+
+    pub fn getEffectiveType(self: *const NetworkInformation) []const u8 {
+        return self._page.fingerprintProfile().connection.effectiveType;
+    }
+
+    pub fn getDownlink(self: *const NetworkInformation) f64 {
+        return self._page.fingerprintProfile().connection.downlink;
+    }
+
+    pub fn getRtt(self: *const NetworkInformation) u32 {
+        return self._page.fingerprintProfile().connection.rtt;
+    }
+
+    pub fn getSaveData(self: *const NetworkInformation) bool {
+        return self._page.fingerprintProfile().connection.saveData;
+    }
+
+    pub fn getType(_: *const NetworkInformation) []const u8 {
+        return "wifi"; // Most common default
+    }
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(NetworkInformation);
+
+        pub const Meta = struct {
+            pub const name = "NetworkInformation";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+
+        pub const effectiveType = bridge.accessor(NetworkInformation.getEffectiveType, null, .{});
+        pub const downlink = bridge.accessor(NetworkInformation.getDownlink, null, .{});
+        pub const rtt = bridge.accessor(NetworkInformation.getRtt, null, .{});
+        pub const saveData = bridge.accessor(NetworkInformation.getSaveData, null, .{});
+        pub const @"type" = bridge.accessor(NetworkInformation.getType, null, .{});
+    };
+};
+
 pub const JsApi = struct {
     pub const bridge = js.Bridge(Navigator);
 
@@ -186,12 +257,18 @@ pub const JsApi = struct {
     pub const cookieEnabled = bridge.accessor(Navigator.getCookieEnabled, null, .{});
     pub const hardwareConcurrency = bridge.accessor(Navigator.getHardwareConcurrency, null, .{});
     pub const maxTouchPoints = bridge.accessor(Navigator.getMaxTouchPoints, null, .{});
+    pub const deviceMemory = bridge.accessor(Navigator.getDeviceMemory, null, .{});
     pub const vendor = bridge.accessor(Navigator.getVendor, null, .{});
     pub const product = bridge.accessor(Navigator.getProduct, null, .{});
     pub const webdriver = bridge.accessor(Navigator.getWebdriver, null, .{});
+    pub const userAgentData = bridge.accessor(Navigator.getUserAgentData, null, .{});
+    pub const plugins = bridge.accessor(Navigator.getPlugins, null, .{});
+    pub const connection = bridge.accessor(Navigator.getConnection, null, .{});
+    pub const permissions = bridge.accessor(Navigator.getPermissions, null, .{});
     pub const registerProtocolHandler = bridge.function(Navigator.registerProtocolHandler, .{ .dom_exception = true });
     pub const unregisterProtocolHandler = bridge.function(Navigator.unregisterProtocolHandler, .{ .dom_exception = true });
 
     // Methods
     pub const javaEnabled = bridge.function(Navigator.javaEnabled, .{});
+    pub const getBattery = bridge.function(Navigator.getBattery, .{});
 };

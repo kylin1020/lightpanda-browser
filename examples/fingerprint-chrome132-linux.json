@@ -1,0 +1,90 @@
+{
+  "chromeVersion": "132.0.0.0",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+  "userAgentData": {
+    "brands": [
+      { "brand": "Google Chrome", "version": "132" },
+      { "brand": "Chromium", "version": "132" },
+      { "brand": "Not_A Brand", "version": "24" }
+    ],
+    "fullVersionList": [
+      { "brand": "Google Chrome", "version": "132.0.0.0" },
+      { "brand": "Chromium", "version": "132.0.0.0" },
+      { "brand": "Not_A Brand", "version": "24.0.0.0" }
+    ],
+    "platform": "Linux",
+    "platformVersion": "6.6.0",
+    "architecture": "x86",
+    "model": "",
+    "mobile": false
+  },
+  "platform": "Linux x86_64",
+  "languages": ["en-US", "en"],
+  "language": "en-US",
+  "timezone": "America/Chicago",
+  "screen": {
+    "width": 1920,
+    "height": 1080,
+    "availWidth": 1920,
+    "availHeight": 1053,
+    "colorDepth": 24,
+    "pixelDepth": 24
+  },
+  "window": {
+    "innerWidth": 1920,
+    "innerHeight": 979,
+    "outerWidth": 1920,
+    "outerHeight": 1053,
+    "screenX": 0,
+    "screenY": 27,
+    "devicePixelRatio": 1.0
+  },
+  "hardwareConcurrency": 12,
+  "maxTouchPoints": 0,
+  "deviceMemory": 8,
+  "vendor": "Google Inc.",
+  "product": "Gecko",
+  "media": {
+    "audioCodecs": [
+      "audio/mpeg",
+      "audio/ogg; codecs=\"vorbis\"",
+      "audio/ogg; codecs=\"opus\"",
+      "audio/wav; codecs=\"1\"",
+      "audio/webm; codecs=\"opus\"",
+      "audio/webm; codecs=\"vorbis\"",
+      "audio/flac",
+      "audio/mp4; codecs=\"mp4a.40.2\""
+    ],
+    "videoCodecs": [
+      "video/mp4; codecs=\"avc1.42E01E\"",
+      "video/mp4; codecs=\"avc1.4D401E\"",
+      "video/mp4; codecs=\"avc1.64001E\"",
+      "video/mp4; codecs=\"av01.0.01M.08\"",
+      "video/webm; codecs=\"vp8\"",
+      "video/webm; codecs=\"vp9\"",
+      "video/webm; codecs=\"av01.0.01M.08\"",
+      "video/ogg; codecs=\"theora\""
+    ]
+  },
+  "webgl": {
+    "vendor": "Google Inc. (AMD)",
+    "renderer": "ANGLE (AMD, AMD Radeon RX 7900 XTX (radeonsi, navi31, LLVM 16.0.6, DRM 3.56, 6.6.0-28-generic), OpenGL 4.6)"
+  },
+  "canvas": {
+    "mode": "stable",
+    "seed": "chrome132-linux-default"
+  },
+  "audio": {
+    "mode": "stable",
+    "seed": "chrome132-linux-default"
+  },
+  "connection": {
+    "effectiveType": "4g",
+    "downlink": 10.0,
+    "rtt": 50,
+    "saveData": false
+  },
+  "tls": {
+    "impersonateTarget": "chrome131"
+  }
+}

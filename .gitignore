@@ -9,3 +9,4 @@ lightpanda.id
 /build/
 /src/html5ever/target/
 src/snapshot.bin
+env.js

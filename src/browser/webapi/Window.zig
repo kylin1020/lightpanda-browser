@@ -369,12 +369,32 @@ pub fn getFramesLength(self: *const Window) u32 {
     return ln;
 }
 
-pub fn getInnerWidth(_: *const Window) u32 {
-    return 1920;
+pub fn getInnerWidth(_: *const Window, page: *Page) u32 {
+    return page.fingerprintProfile().window.innerWidth;
 }
 
-pub fn getInnerHeight(_: *const Window) u32 {
-    return 1080;
+pub fn getInnerHeight(_: *const Window, page: *Page) u32 {
+    return page.fingerprintProfile().window.innerHeight;
+}
+
+pub fn getOuterWidth(_: *const Window, page: *Page) u32 {
+    return page.fingerprintProfile().window.outerWidth;
+}
+
+pub fn getOuterHeight(_: *const Window, page: *Page) u32 {
+    return page.fingerprintProfile().window.outerHeight;
+}
+
+pub fn getScreenX(_: *const Window, page: *Page) i32 {
+    return page.fingerprintProfile().window.screenX;
+}
+
+pub fn getScreenY(_: *const Window, page: *Page) i32 {
+    return page.fingerprintProfile().window.screenY;
+}
+
+pub fn getDevicePixelRatio(_: *const Window, page: *Page) f64 {
+    return page.fingerprintProfile().window.devicePixelRatio;
 }
 
 pub fn getScrollX(self: *const Window) u32 {
@@ -682,6 +702,11 @@ pub const JsApi = struct {
     pub const length = bridge.accessor(Window.getFramesLength, null, .{ .cache = "length" });
     pub const innerWidth = bridge.accessor(Window.getInnerWidth, null, .{ .cache = "innerWidth" });
     pub const innerHeight = bridge.accessor(Window.getInnerHeight, null, .{ .cache = "innerHeight" });
+    pub const outerWidth = bridge.accessor(Window.getOuterWidth, null, .{ .cache = "outerWidth" });
+    pub const outerHeight = bridge.accessor(Window.getOuterHeight, null, .{ .cache = "outerHeight" });
+    pub const screenX = bridge.accessor(Window.getScreenX, null, .{ .cache = "screenX" });
+    pub const screenY = bridge.accessor(Window.getScreenY, null, .{ .cache = "screenY" });
+    pub const devicePixelRatio = bridge.accessor(Window.getDevicePixelRatio, null, .{ .cache = "devicePixelRatio" });
     pub const scrollX = bridge.accessor(Window.getScrollX, null, .{ .cache = "scrollX" });
     pub const scrollY = bridge.accessor(Window.getScrollY, null, .{ .cache = "scrollY" });
     pub const pageXOffset = bridge.accessor(Window.getScrollX, null, .{ .cache = "pageXOffset" });

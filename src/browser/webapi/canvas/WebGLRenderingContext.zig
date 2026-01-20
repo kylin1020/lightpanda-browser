@@ -170,9 +170,13 @@ pub const Extension = union(enum) {
 /// This actually takes "GLenum" which, in fact, is a fancy way to say number.
 /// Return value also depends on what's being passed as `pname`; we don't really
 /// support any though.
-pub fn getParameter(_: *const WebGLRenderingContext, pname: u32) []const u8 {
-    _ = pname;
-    return "";
+pub fn getParameter(_: *const WebGLRenderingContext, pname: u32, page: *Page) []const u8 {
+    const profile = page.fingerprintProfile().webgl;
+    return switch (pname) {
+        Extension.Type.WEBGL_debug_renderer_info.UNMASKED_VENDOR_WEBGL => profile.vendor,
+        Extension.Type.WEBGL_debug_renderer_info.UNMASKED_RENDERER_WEBGL => profile.renderer,
+        else => "",
+    };
 }
 
 /// Enables a WebGL extension.

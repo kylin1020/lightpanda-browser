@@ -24,6 +24,7 @@ const log = @import("log.zig");
 const Http = @import("http/Http.zig");
 const Snapshot = @import("browser/js/Snapshot.zig");
 const Platform = @import("browser/js/Platform.zig");
+const json = std.json;
 
 const Notification = @import("Notification.zig");
 const Telemetry = @import("telemetry/telemetry.zig").Telemetry;
@@ -49,6 +50,208 @@ pub const RunMode = enum {
     version,
 };
 
+pub const FingerprintProfile = struct {
+    chromeVersion: []const u8,
+    userAgent: []const u8,
+    userAgentData: UserAgentData,
+    platform: []const u8,
+    languages: []const []const u8,
+    language: []const u8,
+    timezone: []const u8,
+    screen: ScreenProfile,
+    window: WindowProfile,
+    hardwareConcurrency: u32,
+    maxTouchPoints: u32,
+    deviceMemory: u32,
+    vendor: []const u8,
+    product: []const u8,
+    media: MediaProfile,
+    webgl: WebGlProfile,
+    canvas: CanvasProfile,
+    audio: AudioProfile,
+    connection: ConnectionProfile,
+    tls: TlsProfile = .{},
+
+    pub const UserAgentData = struct {
+        brands: []const Brand,
+        fullVersionList: []const Brand,
+        platform: []const u8,
+        platformVersion: []const u8,
+        architecture: []const u8,
+        model: []const u8,
+        mobile: bool,
+
+        pub const Brand = struct {
+            brand: []const u8,
+            version: []const u8,
+        };
+    };
+
+    pub const ScreenProfile = struct {
+        width: u32,
+        height: u32,
+        availWidth: u32,
+        availHeight: u32,
+        colorDepth: u32,
+        pixelDepth: u32,
+    };
+
+    pub const WindowProfile = struct {
+        innerWidth: u32,
+        innerHeight: u32,
+        outerWidth: u32,
+        outerHeight: u32,
+        screenX: i32,
+        screenY: i32,
+        devicePixelRatio: f64,
+    };
+
+    pub const MediaProfile = struct {
+        audioCodecs: []const []const u8,
+        videoCodecs: []const []const u8,
+    };
+
+    pub const WebGlProfile = struct {
+        vendor: []const u8,
+        renderer: []const u8,
+        params: json.Value = .null,
+    };
+
+    pub const CanvasProfile = struct {
+        mode: Mode,
+        seed: []const u8,
+
+        pub const Mode = enum {
+            stable,
+            noise,
+        };
+    };
+
+    pub const AudioProfile = struct {
+        mode: Mode,
+        seed: []const u8,
+
+        pub const Mode = enum {
+            stable,
+            noise,
+        };
+    };
+
+    pub const ConnectionProfile = struct {
+        effectiveType: []const u8, // "4g", "3g", "2g", "slow-2g"
+        downlink: f64, // Mbps
+        rtt: u32, // ms
+        saveData: bool,
+    };
+
+    /// TLS fingerprint profile for curl-impersonate
+    /// Used to configure TLS/HTTP2 fingerprinting at the network layer
+    /// IMPORTANT: impersonateTarget should match chromeVersion for fingerprint consistency
+    pub const TlsProfile = struct {
+        /// Target browser to impersonate for TLS fingerprinting
+        /// Should match the chromeVersion field for consistency
+        /// Supported Chrome values: "chrome131", "chrome124", "chrome116", "chrome99", etc.
+        /// Supported Firefox values: "ff117", "ff109", "ff102", etc.
+        /// Supported Safari values: "safari15_5", "safari15_3", etc.
+        /// See curl-impersonate documentation for full list
+        impersonateTarget: []const u8 = "chrome124",
+    };
+
+    pub fn defaultMacOS() FingerprintProfile {
+        return .{
+            .chromeVersion = "124.0.0.0",
+            .userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            .userAgentData = .{
+                .brands = &.{
+                    .{ .brand = "Chromium", .version = "124" },
+                    .{ .brand = "Google Chrome", .version = "124" },
+                    .{ .brand = "Not_A Brand", .version = "99" },
+                },
+                .fullVersionList = &.{
+                    .{ .brand = "Chromium", .version = "124.0.0.0" },
+                    .{ .brand = "Google Chrome", .version = "124.0.0.0" },
+                    .{ .brand = "Not_A Brand", .version = "99.0.0.0" },
+                },
+                .platform = "macOS",
+                .platformVersion = "10.15.7",
+                .architecture = "x86",
+                .model = "",
+                .mobile = false,
+            },
+            .platform = "MacIntel",
+            .languages = &.{ "en-US", "en" },
+            .language = "en-US",
+            .timezone = "America/Los_Angeles",
+            .screen = .{
+                .width = 1920,
+                .height = 1080,
+                .availWidth = 1920,
+                .availHeight = 1040,
+                .colorDepth = 24,
+                .pixelDepth = 24,
+            },
+            .window = .{
+                .innerWidth = 1920,
+                .innerHeight = 1080,
+                .outerWidth = 1920,
+                .outerHeight = 1080,
+                .screenX = 0,
+                .screenY = 0,
+                .devicePixelRatio = 1.0,
+            },
+            .hardwareConcurrency = 8,
+            .maxTouchPoints = 0,
+            .deviceMemory = 8,
+            .vendor = "Google Inc.",
+            .product = "Gecko",
+            .media = .{
+                .audioCodecs = &.{
+                    "audio/mpeg",
+                    "audio/ogg; codecs=\"vorbis\"",
+                    "audio/wav; codecs=\"1\"",
+                },
+                .videoCodecs = &.{
+                    "video/mp4; codecs=\"avc1.42E01E\"",
+                    "video/webm; codecs=\"vp8\"",
+                },
+            },
+            .webgl = .{
+                .vendor = "Intel Inc.",
+                .renderer = "Intel Iris OpenGL Engine",
+                .params = .null,
+            },
+            .canvas = .{
+                .mode = .stable,
+                .seed = "macos-default",
+            },
+            .audio = .{
+                .mode = .stable,
+                .seed = "macos-default",
+            },
+            .connection = .{
+                .effectiveType = "4g",
+                .downlink = 10.0,
+                .rtt = 50,
+                .saveData = false,
+            },
+            .tls = .{
+                .impersonateTarget = "chrome124",
+            },
+        };
+    }
+
+    pub fn validate(self: FingerprintProfile) !void {
+        if (self.userAgent.len == 0) return error.InvalidFingerprintProfile;
+        if (self.platform.len == 0) return error.InvalidFingerprintProfile;
+        if (self.language.len == 0) return error.InvalidFingerprintProfile;
+        if (self.languages.len == 0) return error.InvalidFingerprintProfile;
+        if (self.chromeVersion.len == 0) return error.InvalidFingerprintProfile;
+        if (self.screen.width == 0 or self.screen.height == 0) return error.InvalidFingerprintProfile;
+        if (self.window.innerWidth == 0 or self.window.innerHeight == 0) return error.InvalidFingerprintProfile;
+        if (self.deviceMemory == 0) return error.InvalidFingerprintProfile;
+    }
+};
+
 pub const Config = struct {
     run_mode: RunMode,
     tls_verify_host: bool = true,
@@ -59,6 +262,7 @@ pub const Config = struct {
     http_max_host_open: ?u8 = null,
     http_max_concurrent: ?u8 = null,
     user_agent: [:0]const u8,
+    fingerprint_profile: FingerprintProfile,
 };
 
 pub fn init(allocator: Allocator, config: Config) !*App {
@@ -80,6 +284,7 @@ pub fn init(allocator: Allocator, config: Config) !*App {
         .tls_verify_host = config.tls_verify_host,
         .proxy_bearer_token = config.proxy_bearer_token,
         .user_agent = config.user_agent,
+        .impersonate_target = config.fingerprint_profile.tls.impersonateTarget,
     });
     errdefer app.http.deinit();
 

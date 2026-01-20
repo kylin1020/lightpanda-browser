@@ -23,7 +23,14 @@ pub const c = @cImport({
     @cInclude("curl/curl.h");
 });
 
+/// curl-impersonate specific function declaration
+/// This function is only available when using libcurl-impersonate
+/// Declared here for use when CURL_IMPERSONATE is enabled
+pub extern fn curl_easy_impersonate(curl: *c.CURL, target: [*c]const u8, default_headers: c_int) c.CURLcode;
+
 pub const ENABLE_DEBUG = false;
+/// Set to true when building with libcurl-impersonate to enable TLS fingerprinting
+pub const ENABLE_IMPERSONATE = false;
 pub const Client = @import("Client.zig");
 pub const Transfer = Client.Transfer;
 
@@ -120,6 +127,19 @@ pub const Connection = struct {
     pub fn init(ca_blob_: ?c.curl_blob, opts: *const Http.Opts) !Connection {
         const easy = c.curl_easy_init() orelse return error.FailedToInitializeEasy;
         errdefer _ = c.curl_easy_cleanup(easy);
+
+        // TLS fingerprinting via curl-impersonate
+        // Only active when ENABLE_IMPERSONATE is true (built with libcurl-impersonate)
+        if (comptime ENABLE_IMPERSONATE) {
+            if (opts.impersonate_target) |target| {
+                // curl_easy_impersonate(handle, target, default_headers)
+                // default_headers=1 means use browser-like headers (sec-ch-ua, etc.)
+                const result = curl_easy_impersonate(easy, target.ptr, 1);
+                if (result != c.CURLE_OK) {
+                    log.warn(.app, "curl_easy_impersonate failed", .{ .target = target, .err = result });
+                }
+            }
+        }
 
         // timeouts
         try errorCheck(c.curl_easy_setopt(easy, c.CURLOPT_TIMEOUT_MS, @as(c_long, @intCast(opts.timeout_ms))));
@@ -353,6 +373,10 @@ pub const Opts = struct {
     http_proxy: ?[:0]const u8 = null,
     proxy_bearer_token: ?[:0]const u8 = null,
     user_agent: [:0]const u8,
+    /// TLS impersonate target for curl-impersonate (e.g., "chrome131", "ff117")
+    /// Set to null to disable TLS fingerprinting (uses standard libcurl behavior)
+    /// Only effective when built with libcurl-impersonate
+    impersonate_target: ?[]const u8 = null,
 };
 
 pub const Method = enum(u8) {

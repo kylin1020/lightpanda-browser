@@ -72,6 +72,7 @@ pub const BUF_SIZE = 1024;
 const Page = @This();
 
 _session: *Session,
+_fingerprint_override: ?lp.App.FingerprintProfile = null,
 
 _event_manager: EventManager,
 
@@ -320,6 +321,18 @@ pub fn getTitle(self: *Page) !?[]const u8 {
 
 pub fn getOrigin(self: *Page, allocator: Allocator) !?[]const u8 {
     return try URL.getOrigin(allocator, self.url);
+}
+
+pub fn fingerprintProfile(self: *const Page) lp.App.FingerprintProfile {
+    return self._fingerprint_override orelse self._session.fingerprint_profile;
+}
+
+pub fn setFingerprintOverride(self: *Page, profile: lp.App.FingerprintProfile) void {
+    self._fingerprint_override = profile;
+}
+
+pub fn clearFingerprintOverride(self: *Page) void {
+    self._fingerprint_override = null;
 }
 
 pub fn isSameOrigin(self: *const Page, url: [:0]const u8) !bool {

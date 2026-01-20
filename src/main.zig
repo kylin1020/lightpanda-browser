@@ -84,6 +84,8 @@ fn run(allocator: Allocator, main_arena: Allocator, sighandler: *SigHandler) !vo
         break :blk USER_AGENT;
     };
 
+    const fingerprint_profile = try args.fingerprintProfile(main_arena);
+
     // _app is global to handle graceful shutdown.
     var app = try App.init(allocator, .{
         .run_mode = args.mode,
@@ -95,6 +97,7 @@ fn run(allocator: Allocator, main_arena: Allocator, sighandler: *SigHandler) !vo
         .http_max_host_open = args.httpMaxHostOpen(),
         .http_max_concurrent = args.httpMaxConcurrent(),
         .user_agent = user_agent,
+        .fingerprint_profile = fingerprint_profile,
     });
 
     defer app.deinit();
@@ -229,6 +232,26 @@ const Command = struct {
         };
     }
 
+    fn fingerprintProfilePath(self: *const Command) ?[]const u8 {
+        return switch (self.mode) {
+            inline .serve, .fetch => |opts| opts.common.fingerprint_profile_path,
+            else => unreachable,
+        };
+    }
+
+    fn fingerprintProfile(self: *const Command, arena: Allocator) !App.FingerprintProfile {
+        const path = self.fingerprintProfilePath() orelse return App.FingerprintProfile.defaultMacOS();
+        const file = try std.fs.cwd().openFile(path, .{});
+        defer file.close();
+
+        const size = try file.getEndPos();
+        const data = try arena.alloc(u8, size);
+        _ = try file.readAll(data);
+        const profile = try std.json.parseFromSliceLeaky(App.FingerprintProfile, arena, data, .{ .ignore_unknown_fields = true });
+        try profile.validate();
+        return profile;
+    }
+
     const Mode = union(App.RunMode) {
         help: bool, // false when being printed because of an error
         fetch: Fetch,
@@ -263,6 +286,7 @@ const Command = struct {
         log_format: ?log.Format = null,
         log_filter_scopes: ?[]log.Scope = null,
         user_agent_suffix: ?[]const u8 = null,
+        fingerprint_profile_path: ?[]const u8 = null,
     };
 
     fn printUsageAndExit(self: *const Command, success: bool) void {
@@ -316,6 +340,9 @@ const Command = struct {
             \\
             \\--user_agent_suffix
             \\                Suffix to append to the Lightpanda/X.Y User-Agent
+            \\
+            \\--fingerprint_profile
+            \\                Path to fingerprint profile JSON (macOS default if omitted)
             \\
         ;
 
@@ -744,6 +771,15 @@ fn parseCommonArg(
             }
         }
         common.user_agent_suffix = try allocator.dupe(u8, str);
+        return true;
+    }
+
+    if (std.mem.eql(u8, "--fingerprint_profile", opt)) {
+        const str = args.next() orelse {
+            log.fatal(.app, "missing argument value", .{ .arg = "--fingerprint_profile" });
+            return error.InvalidArgument;
+        };
+        common.fingerprint_profile_path = try allocator.dupe(u8, str);
         return true;
     }
 

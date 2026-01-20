@@ -43,28 +43,28 @@ pub fn asEventTarget(self: *Screen) *EventTarget {
     return self._proto;
 }
 
-pub fn getWidth(_: *const Screen) u32 {
-    return 1920;
+pub fn getWidth(_: *const Screen, page: *Page) u32 {
+    return page.fingerprintProfile().screen.width;
 }
 
-pub fn getHeight(_: *const Screen) u32 {
-    return 1080;
+pub fn getHeight(_: *const Screen, page: *Page) u32 {
+    return page.fingerprintProfile().screen.height;
 }
 
-pub fn getAvailWidth(_: *const Screen) u32 {
-    return 1920;
+pub fn getAvailWidth(_: *const Screen, page: *Page) u32 {
+    return page.fingerprintProfile().screen.availWidth;
 }
 
-pub fn getAvailHeight(_: *const Screen) u32 {
-    return 1040; // 40px reserved for taskbar/dock
+pub fn getAvailHeight(_: *const Screen, page: *Page) u32 {
+    return page.fingerprintProfile().screen.availHeight;
 }
 
-pub fn getColorDepth(_: *const Screen) u32 {
-    return 24;
+pub fn getColorDepth(_: *const Screen, page: *Page) u32 {
+    return page.fingerprintProfile().screen.colorDepth;
 }
 
-pub fn getPixelDepth(_: *const Screen) u32 {
-    return 24;
+pub fn getPixelDepth(_: *const Screen, page: *Page) u32 {
+    return page.fingerprintProfile().screen.pixelDepth;
 }
 
 pub fn getOrientation(self: *Screen, page: *Page) !*Orientation {

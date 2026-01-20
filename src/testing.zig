@@ -449,6 +449,7 @@ test "tests:beforeAll" {
         .run_mode = .serve,
         .tls_verify_host = false,
         .user_agent = "User-Agent: Lightpanda/1.0 internal-tester",
+        .fingerprint_profile = App.FingerprintProfile.defaultMacOS(),
     });
     errdefer test_app.deinit();
 

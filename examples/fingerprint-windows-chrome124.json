@@ -1,0 +1,82 @@
+{
+  "chromeVersion": "124.0.0.0",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "userAgentData": {
+    "brands": [
+      { "brand": "Chromium", "version": "124" },
+      { "brand": "Google Chrome", "version": "124" },
+      { "brand": "Not_A Brand", "version": "99" }
+    ],
+    "fullVersionList": [
+      { "brand": "Chromium", "version": "124.0.0.0" },
+      { "brand": "Google Chrome", "version": "124.0.0.0" },
+      { "brand": "Not_A Brand", "version": "99.0.0.0" }
+    ],
+    "platform": "Windows",
+    "platformVersion": "10.0.0",
+    "architecture": "x86",
+    "model": "",
+    "mobile": false
+  },
+  "platform": "Win32",
+  "languages": ["en-US", "en"],
+  "language": "en-US",
+  "timezone": "America/New_York",
+  "screen": {
+    "width": 1920,
+    "height": 1080,
+    "availWidth": 1920,
+    "availHeight": 1040,
+    "colorDepth": 24,
+    "pixelDepth": 24
+  },
+  "window": {
+    "innerWidth": 1920,
+    "innerHeight": 969,
+    "outerWidth": 1936,
+    "outerHeight": 1056,
+    "screenX": 0,
+    "screenY": 0,
+    "devicePixelRatio": 1.0
+  },
+  "hardwareConcurrency": 8,
+  "maxTouchPoints": 0,
+  "deviceMemory": 8,
+  "vendor": "Google Inc.",
+  "product": "Gecko",
+  "media": {
+    "audioCodecs": [
+      "audio/mpeg",
+      "audio/ogg; codecs=\"vorbis\"",
+      "audio/wav; codecs=\"1\"",
+      "audio/webm; codecs=\"opus\""
+    ],
+    "videoCodecs": [
+      "video/mp4; codecs=\"avc1.42E01E\"",
+      "video/mp4; codecs=\"avc1.4D401E\"",
+      "video/webm; codecs=\"vp8\"",
+      "video/webm; codecs=\"vp9\""
+    ]
+  },
+  "webgl": {
+    "vendor": "Google Inc. (NVIDIA)",
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "canvas": {
+    "mode": "stable",
+    "seed": "windows-chrome124-default"
+  },
+  "audio": {
+    "mode": "stable",
+    "seed": "windows-chrome124-default"
+  },
+  "connection": {
+    "effectiveType": "4g",
+    "downlink": 10.0,
+    "rtt": 50,
+    "saveData": false
+  },
+  "tls": {
+    "impersonateTarget": "chrome124"
+  }
+}

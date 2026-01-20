@@ -61,6 +61,7 @@ history: History,
 navigation: Navigation,
 
 page: ?*Page = null,
+fingerprint_profile: lp.App.FingerprintProfile,
 
 pub fn init(self: *Session, browser: *Browser) !void {
     var executor = try browser.env.newExecutionWorld();
@@ -78,6 +79,7 @@ pub fn init(self: *Session, browser: *Browser) !void {
         .navigation = .{},
         .history = .{},
         .transfer_arena = browser.transfer_arena.allocator(),
+        .fingerprint_profile = browser.app.config.fingerprint_profile,
     };
 }
 
