@@ -134,9 +134,17 @@ pub const Connection = struct {
             if (opts.impersonate_target) |target| {
                 // curl_easy_impersonate(handle, target, default_headers)
                 // default_headers=1 means use browser-like headers (sec-ch-ua, etc.)
-                const result = curl_easy_impersonate(easy, target.ptr, 1);
-                if (result != c.CURLE_OK) {
-                    log.warn(.app, "curl_easy_impersonate failed", .{ .target = target, .err = result });
+                // Create null-terminated copy for C interop
+                var target_buf: [64:0]u8 = undefined;
+                if (target.len < target_buf.len) {
+                    @memcpy(target_buf[0..target.len], target);
+                    target_buf[target.len] = 0;
+                    const result = curl_easy_impersonate(easy, &target_buf, 1);
+                    if (result != c.CURLE_OK) {
+                        log.warn(.app, "curl_easy_impersonate failed", .{ .target = target, .err = result });
+                    }
+                } else {
+                    log.warn(.app, "impersonate_target too long", .{ .len = target.len });
                 }
             }
         }
