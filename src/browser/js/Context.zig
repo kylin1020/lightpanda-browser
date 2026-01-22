@@ -39,6 +39,9 @@ fn safeCast(comptime T: type, value: anytype) T {
     return @intCast(value);
 }
 
+/// Maximum reasonable array size for V8 (avoid memory exhaustion)
+const MAX_JS_ARRAY_LENGTH: u32 = 10_000_000;
+
 const Allocator = std.mem.Allocator;
 const TaggedAnyOpaque = js.TaggedAnyOpaque;
 
@@ -352,9 +355,11 @@ pub fn newObject(self: *Context) js.Object {
 }
 
 pub fn newArray(self: *Context, len: u32) js.Array {
+    // Cap array length to avoid V8 memory exhaustion
+    const safe_len = @min(len, MAX_JS_ARRAY_LENGTH);
     return .{
         .ctx = self,
-        .handle = v8.v8__Array__New(self.isolate.handle, @intCast(len)).?,
+        .handle = v8.v8__Array__New(self.isolate.handle, @intCast(safe_len)).?,
     };
 }
 
@@ -443,9 +448,10 @@ pub fn zigValueToJs(self: *Context, value: anytype, comptime opts: Caller.CallOp
                     // have handled it
                     unreachable;
                 }
-                var js_arr = self.newArray(safeCast(u32, value.len));
-                for (value, 0..) |v, i| {
-                    if (try js_arr.set(safeCast(u32, i), v, opts) == false) {
+                const safe_len = @min(value.len, MAX_JS_ARRAY_LENGTH);
+                var js_arr = self.newArray(@intCast(safe_len));
+                for (value[0..safe_len], 0..) |v, i| {
+                    if (try js_arr.set(@intCast(i), v, opts) == false) {
                         return error.FailedToCreateArray;
                     }
                 }
@@ -1977,9 +1983,10 @@ fn zigJsonToJs(self: *Context, value: std.json.Value) !js.Value {
         .number_string => return error.TODO,
 
         .array => |v| {
-            const js_arr = self.newArray(safeCast(u32, v.items.len));
-            for (v.items, 0..) |array_value, i| {
-                if (try js_arr.set(safeCast(u32, i), array_value, .{}) == false) {
+            const safe_len = @min(v.items.len, MAX_JS_ARRAY_LENGTH);
+            const js_arr = self.newArray(@intCast(safe_len));
+            for (v.items[0..safe_len], 0..) |array_value, i| {
+                if (try js_arr.set(@intCast(i), array_value, .{}) == false) {
                     return error.JSObjectSetValue;
                 }
             }
