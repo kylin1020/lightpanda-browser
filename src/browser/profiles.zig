@@ -17,7 +17,7 @@
 //! Usage: `--browser chrome131-macos` or `--browser chrome132-windows`
 
 const std = @import("std");
-const App = @import("App.zig");
+const App = @import("../App.zig");
 const FingerprintProfile = App.FingerprintProfile;
 
 /// Supported browser profiles
@@ -174,7 +174,7 @@ pub fn chrome131MacOS() FingerprintProfile {
             .saveData = false,
         },
         .tls = .{
-            .impersonateTarget = "chrome131",
+            .impersonateTarget = "chrome116",
         },
     };
 }
@@ -265,7 +265,7 @@ pub fn chrome131Windows() FingerprintProfile {
             .saveData = false,
         },
         .tls = .{
-            .impersonateTarget = "chrome131",
+            .impersonateTarget = "chrome116",
         },
     };
 }
@@ -354,7 +354,7 @@ pub fn chrome131Linux() FingerprintProfile {
             .saveData = false,
         },
         .tls = .{
-            .impersonateTarget = "chrome131",
+            .impersonateTarget = "chrome116",
         },
     };
 }
@@ -384,7 +384,7 @@ pub fn chrome132MacOS() FingerprintProfile {
     profile.canvas.seed = "chrome132-macos-v1";
     profile.audio.seed = "chrome132-macos-v1";
     // Chrome 132 TLS fingerprint (use chrome131 as closest available in curl-impersonate)
-    profile.tls.impersonateTarget = "chrome131";
+    profile.tls.impersonateTarget = "chrome116";
     return profile;
 }
 
@@ -412,7 +412,7 @@ pub fn chrome132Windows() FingerprintProfile {
     };
     profile.canvas.seed = "chrome132-windows-v1";
     profile.audio.seed = "chrome132-windows-v1";
-    profile.tls.impersonateTarget = "chrome131";
+    profile.tls.impersonateTarget = "chrome116";
     return profile;
 }
 
@@ -440,7 +440,7 @@ pub fn chrome132Linux() FingerprintProfile {
     };
     profile.canvas.seed = "chrome132-linux-v1";
     profile.audio.seed = "chrome132-linux-v1";
-    profile.tls.impersonateTarget = "chrome131";
+    profile.tls.impersonateTarget = "chrome116";
     return profile;
 }
 
@@ -523,9 +523,26 @@ pub fn chrome124Windows() FingerprintProfile {
             .saveData = false,
         },
         .tls = .{
-            .impersonateTarget = "chrome124",
+            .impersonateTarget = "chrome116",
         },
     };
+}
+
+/// Get a random browser profile
+pub fn getRandomProfile() FingerprintProfile {
+    const available_profiles = [_]BrowserType{
+        .chrome131_macos,
+        .chrome131_windows,
+        .chrome131_linux,
+        .chrome132_macos,
+        .chrome132_windows,
+        .chrome132_linux,
+    };
+
+    // Use timestamp-based seed for randomness
+    const timestamp = @as(u64, @intCast(std.time.timestamp()));
+    const index = timestamp % available_profiles.len;
+    return getProfile(available_profiles[index]);
 }
 
 /// List all available browser profiles

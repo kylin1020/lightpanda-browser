@@ -388,7 +388,7 @@ pub const AudioBuffer = struct {
 pub const OscillatorNode = struct {
     _context: *anyopaque,
 
-    pub fn connect(_: *OscillatorNode, _: *anyopaque) void {}
+    pub fn connect(_: *OscillatorNode, _: js.Object) void {}
     pub fn disconnect(_: *OscillatorNode) void {}
     pub fn start(_: *OscillatorNode, _: ?f64) void {}
     pub fn stop(_: *OscillatorNode, _: ?f64) void {}
@@ -412,7 +412,7 @@ pub const OscillatorNode = struct {
 pub const GainNode = struct {
     _context: *anyopaque,
 
-    pub fn connect(_: *GainNode, _: *anyopaque) void {}
+    pub fn connect(_: *GainNode, _: js.Object) void {}
     pub fn disconnect(_: *GainNode) void {}
 
     pub const JsApi = struct {
@@ -432,7 +432,7 @@ pub const GainNode = struct {
 pub const AnalyserNode = struct {
     _context: *anyopaque,
 
-    pub fn connect(_: *AnalyserNode, _: *anyopaque) void {}
+    pub fn connect(_: *AnalyserNode, _: js.Object) void {}
     pub fn disconnect(_: *AnalyserNode) void {}
 
     pub const JsApi = struct {
@@ -452,7 +452,7 @@ pub const AnalyserNode = struct {
 pub const DynamicsCompressorNode = struct {
     _context: *anyopaque,
 
-    pub fn connect(_: *DynamicsCompressorNode, _: *anyopaque) void {}
+    pub fn connect(_: *DynamicsCompressorNode, _: js.Object) void {}
     pub fn disconnect(_: *DynamicsCompressorNode) void {}
 
     pub const JsApi = struct {

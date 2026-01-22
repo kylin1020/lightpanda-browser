@@ -739,6 +739,14 @@ fn buildCurlImpersonate(b: *Build, m: *Build.Module, opts: *Build.Step.Options) 
     m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libnghttp2.a" }) });
     m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libbrotlidec.a" }) });
     m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libbrotlicommon.a" }) });
+    // IDN2 support for curl (internationalized domain names)
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libidn2.a" }) });
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libunistring.a" }) });
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ install_dir, "lib", "libintl.a" }) });
+    // Link system libiconv (required by libunistring)
+    m.linkSystemLibrary("iconv", .{});
+    // Link system LDAP (required by curl)
+    m.linkSystemLibrary("ldap", .{});
 }
 
 const Manifest = struct {

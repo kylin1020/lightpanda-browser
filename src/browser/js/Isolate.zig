@@ -16,10 +16,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+const std = @import("std");
 const js = @import("js.zig");
 const v8 = js.v8;
 
 const Isolate = @This();
+
+/// Maximum string length that V8 can handle (c_int max)
+const MAX_STRING_LENGTH: usize = @intCast(std.math.maxInt(c_int));
 
 handle: *v8.Isolate,
 
@@ -72,7 +76,9 @@ pub fn throwException(self: Isolate, value: *const v8.Value) *const v8.Value {
 }
 
 pub fn initStringHandle(self: Isolate, str: []const u8) *const v8.String {
-    return v8.v8__String__NewFromUtf8(self.handle, str.ptr, v8.kNormal, @as(c_int, @intCast(str.len))).?;
+    // Truncate string if it exceeds V8's maximum length (c_int max)
+    const safe_len = @min(str.len, MAX_STRING_LENGTH);
+    return v8.v8__String__NewFromUtf8(self.handle, str.ptr, v8.kNormal, @as(c_int, @intCast(safe_len))).?;
 }
 
 pub fn createError(self: Isolate, msg: []const u8) *const v8.Value {

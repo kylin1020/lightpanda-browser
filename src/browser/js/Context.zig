@@ -29,6 +29,16 @@ const Caller = bridge.Caller;
 const Page = @import("../Page.zig");
 const ScriptManager = @import("../ScriptManager.zig");
 
+/// Safely cast a value to a smaller integer type, capping at the max value
+/// instead of panicking on overflow
+fn safeCast(comptime T: type, value: anytype) T {
+    const max_val = std.math.maxInt(T);
+    if (value > max_val) {
+        return max_val;
+    }
+    return @intCast(value);
+}
+
 const Allocator = std.mem.Allocator;
 const TaggedAnyOpaque = js.TaggedAnyOpaque;
 
@@ -433,9 +443,9 @@ pub fn zigValueToJs(self: *Context, value: anytype, comptime opts: Caller.CallOp
                     // have handled it
                     unreachable;
                 }
-                var js_arr = self.newArray(@intCast(value.len));
+                var js_arr = self.newArray(safeCast(u32, value.len));
                 for (value, 0..) |v, i| {
-                    if (try js_arr.set(@intCast(i), v, opts) == false) {
+                    if (try js_arr.set(safeCast(u32, i), v, opts) == false) {
                         return error.FailedToCreateArray;
                     }
                 }
@@ -514,9 +524,9 @@ pub fn zigValueToJs(self: *Context, value: anytype, comptime opts: Caller.CallOp
 
             if (s.is_tuple) {
                 // return the tuple struct as an array
-                var js_arr = self.newArray(@intCast(s.fields.len));
+                var js_arr = self.newArray(safeCast(u32, s.fields.len));
                 inline for (s.fields, 0..) |f, i| {
-                    if (try js_arr.set(@intCast(i), @field(value, f.name), opts) == false) {
+                    if (try js_arr.set(safeCast(u32, i), @field(value, f.name), opts) == false) {
                         return error.FailedToCreateArray;
                     }
                 }
@@ -619,7 +629,7 @@ pub fn mapZigInstanceToJs(self: *Context, js_obj_handle: ?*const v8.Object, valu
                 tao.* = .{
                     .value = resolved.ptr,
                     .prototype_chain = resolved.prototype_chain.ptr,
-                    .prototype_len = @intCast(resolved.prototype_chain.len),
+                    .prototype_len = safeCast(u16, resolved.prototype_chain.len),
                     .subtype = if (@hasDecl(JsApi.Meta, "subtype")) JsApi.Meta.subype else .node,
                 };
 
@@ -1967,9 +1977,9 @@ fn zigJsonToJs(self: *Context, value: std.json.Value) !js.Value {
         .number_string => return error.TODO,
 
         .array => |v| {
-            const js_arr = self.newArray(@intCast(v.items.len));
+            const js_arr = self.newArray(safeCast(u32, v.items.len));
             for (v.items, 0..) |array_value, i| {
-                if (try js_arr.set(@intCast(i), array_value, .{}) == false) {
+                if (try js_arr.set(safeCast(u32, i), array_value, .{}) == false) {
                     return error.JSObjectSetValue;
                 }
             }

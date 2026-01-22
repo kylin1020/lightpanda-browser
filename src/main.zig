@@ -77,15 +77,16 @@ fn run(allocator: Allocator, main_arena: Allocator, sighandler: *SigHandler) !vo
         log.opts.filter_scopes = lfs;
     }
 
-    const user_agent = blk: {
-        const USER_AGENT = "User-Agent: Lightpanda/1.0";
-        if (args.userAgentSuffix()) |suffix| {
-            break :blk try std.fmt.allocPrintSentinel(main_arena, "{s} {s}", .{ USER_AGENT, suffix }, 0);
-        }
-        break :blk USER_AGENT;
-    };
-
     const fingerprint_profile = try args.fingerprintProfile(main_arena);
+
+    // User-Agent comes from fingerprint profile
+    const user_agent = blk: {
+        const base_ua = try std.fmt.allocPrintSentinel(main_arena, "User-Agent: {s}", .{fingerprint_profile.userAgent}, 0);
+        if (args.userAgentSuffix()) |suffix| {
+            break :blk try std.fmt.allocPrintSentinel(main_arena, "{s} {s}", .{ base_ua, suffix }, 0);
+        }
+        break :blk base_ua;
+    };
 
     // _app is global to handle graceful shutdown.
     var app = try App.init(allocator, .{
@@ -248,21 +249,25 @@ const Command = struct {
     }
 
     fn fingerprintProfile(self: *const Command, arena: Allocator) !App.FingerprintProfile {
-        // Priority: --browser > --fingerprint_profile > default
+        // Priority: --browser > --fingerprint_profile > random
         if (self.browser()) |b| {
             return profiles.getProfile(b);
         }
-        
-        const path = self.fingerprintProfilePath() orelse return App.FingerprintProfile.defaultMacOS();
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
 
-        const size = try file.getEndPos();
-        const data = try arena.alloc(u8, size);
-        _ = try file.readAll(data);
-        const profile = try std.json.parseFromSliceLeaky(App.FingerprintProfile, arena, data, .{ .ignore_unknown_fields = true });
-        try profile.validate();
-        return profile;
+        if (self.fingerprintProfilePath()) |path| {
+            const file = try std.fs.cwd().openFile(path, .{});
+            defer file.close();
+
+            const size = try file.getEndPos();
+            const data = try arena.alloc(u8, size);
+            _ = try file.readAll(data);
+            const profile = try std.json.parseFromSliceLeaky(App.FingerprintProfile, arena, data, .{ .ignore_unknown_fields = true });
+            try profile.validate();
+            return profile;
+        }
+
+        // Default: random profile selection
+        return profiles.getRandomProfile();
     }
 
     const Mode = union(App.RunMode) {

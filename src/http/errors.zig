@@ -200,8 +200,7 @@ pub fn fromCode(code: c.CURLcode) Error {
         c.CURLE_PROXY => Error.Proxy,
         c.CURLE_SSL_CLIENTCERT => Error.SslClientcert,
         c.CURLE_UNRECOVERABLE_POLL => Error.UnrecoverablePoll,
-        c.CURLE_TOO_LARGE => Error.TooLarge,
-        else => Error.Unknown,
+        else => if (@hasDecl(c, "CURLE_TOO_LARGE") and code == c.CURLE_TOO_LARGE) Error.TooLarge else Error.Unknown,
     };
 }
 

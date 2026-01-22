@@ -151,6 +151,12 @@ pub fn dispatch(self: *EventManager, target: *EventTarget, event: *Event) !void 
         .navigation,
         .screen,
         .screen_orientation,
+        .permissions,
+        .permission_status,
+        .battery_manager,
+        .audio_context,
+        .offline_audio_context,
+        .base_audio_context,
         .generic,
         => {
             const list = self.lookup.get(@intFromPtr(target)) orelse return;

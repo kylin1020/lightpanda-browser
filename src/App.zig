@@ -154,7 +154,7 @@ pub const FingerprintProfile = struct {
         /// Supported Firefox values: "ff117", "ff109", "ff102", etc.
         /// Supported Safari values: "safari15_5", "safari15_3", etc.
         /// See curl-impersonate documentation for full list
-        impersonateTarget: []const u8 = "chrome124",
+        impersonateTarget: []const u8 = "chrome116",
     };
 
     pub fn defaultMacOS() FingerprintProfile {
@@ -235,7 +235,7 @@ pub const FingerprintProfile = struct {
                 .saveData = false,
             },
             .tls = .{
-                .impersonateTarget = "chrome124",
+                .impersonateTarget = "chrome116",
             },
         };
     }

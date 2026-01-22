@@ -191,7 +191,7 @@ pub fn registerTypes() []const type {
     return &.{
         Navigator,
         NetworkInformation,
-    } ++ Permissions.registerTypes() ++ BatteryManager.registerTypes();
+    };
 }
 
 /// NetworkInformation API - provides connection information

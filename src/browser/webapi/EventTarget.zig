@@ -42,6 +42,12 @@ pub const Type = union(enum) {
     navigation: *@import("navigation/NavigationEventTarget.zig"),
     screen: *@import("Screen.zig"),
     screen_orientation: *@import("Screen.zig").Orientation,
+    permissions: *@import("Permissions.zig").Permissions,
+    permission_status: *@import("Permissions.zig").PermissionStatus,
+    battery_manager: *@import("BatteryManager.zig").BatteryManager,
+    audio_context: *@import("AudioContext.zig").AudioContext,
+    offline_audio_context: *@import("AudioContext.zig").OfflineAudioContext,
+    base_audio_context: *@import("AudioContext.zig").BaseAudioContext,
 };
 
 pub fn init(page: *Page) !*EventTarget {
@@ -132,6 +138,12 @@ pub fn format(self: *EventTarget, writer: *std.Io.Writer) !void {
         .navigation => writer.writeAll("<Navigation>"),
         .screen => writer.writeAll("<Screen>"),
         .screen_orientation => writer.writeAll("<ScreenOrientation>"),
+        .permissions => writer.writeAll("<Permissions>"),
+        .permission_status => writer.writeAll("<PermissionStatus>"),
+        .battery_manager => writer.writeAll("<BatteryManager>"),
+        .audio_context => writer.writeAll("<AudioContext>"),
+        .offline_audio_context => writer.writeAll("<OfflineAudioContext>"),
+        .base_audio_context => writer.writeAll("<BaseAudioContext>"),
     };
 }
 
@@ -148,6 +160,12 @@ pub fn toString(self: *EventTarget) []const u8 {
         .navigation => return "[object Navigation]",
         .screen => return "[object Screen]",
         .screen_orientation => return "[object ScreenOrientation]",
+        .permissions => return "[object Permissions]",
+        .permission_status => return "[object PermissionStatus]",
+        .battery_manager => return "[object BatteryManager]",
+        .audio_context => return "[object AudioContext]",
+        .offline_audio_context => return "[object OfflineAudioContext]",
+        .base_audio_context => return "[object BaseAudioContext]",
     };
 }
 

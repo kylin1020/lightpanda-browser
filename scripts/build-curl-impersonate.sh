@@ -36,6 +36,13 @@ check_deps() {
 # Build
 build_chrome() {
     mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
+    
+    if [ -f "$INSTALL_DIR/lib/libcurl-impersonate-chrome.a" ]; then
+        echo "==> Library already exists at $INSTALL_DIR/lib/libcurl-impersonate-chrome.a"
+        echo "==> Skipping build. Use 'clean' to rebuild."
+        return 0
+    fi
+    
     cd "$CURL_IMPERSONATE_DIR"
     
     if [ ! -f "Makefile" ]; then
