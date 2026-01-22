@@ -69,7 +69,10 @@ pub fn fetch(app: *App, url: [:0]const u8, opts: FetchOpts) !void {
     _ = session.wait(opts.wait_ms);
 
     const writer = opts.writer orelse return;
-    try dump.root(page.window._document, opts.dump, writer, page);
+    // After wait(), page may have been replaced by a scheduled navigation.
+    // Always use session.page to get the current valid page.
+    const current_page = session.page orelse return;
+    try dump.root(current_page.window._document, opts.dump, writer, current_page);
     try writer.flush();
 }
 

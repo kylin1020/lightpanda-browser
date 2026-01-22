@@ -39,6 +39,26 @@ fn safeCast(comptime T: type, value: anytype) T {
     return @intCast(value);
 }
 
+/// Check if a pointer looks valid (not NULL, not poison patterns)
+/// Returns true if pointer appears valid, false otherwise
+fn isValidSlicePointer(comptime T: type, ptr: [*]const T) bool {
+    const addr = @intFromPtr(ptr);
+    // Check for NULL
+    if (addr == 0) return false;
+    // Check for common poison/debug patterns that indicate use-after-free or uninitialized memory
+    if (addr == 0xaaaaaaaaaaaaaaaa or
+        addr == 0xcdcdcdcdcdcdcdcd or
+        addr == 0xdddddddddddddddd or
+        addr == 0xfeeefeeefeeefeee or
+        addr == 0xdeadbeefdeadbeef)
+    {
+        return false;
+    }
+    // Check for very low addresses (likely invalid on modern systems)
+    if (addr < 0x1000) return false;
+    return true;
+}
+
 /// Maximum reasonable array size for V8 (avoid memory exhaustion)
 const MAX_JS_ARRAY_LENGTH: u32 = 10_000_000;
 
@@ -447,6 +467,11 @@ pub fn zigValueToJs(self: *Context, value: anytype, comptime opts: Caller.CallOp
                     // If this was the case, simpleZigValueToJs would
                     // have handled it
                     unreachable;
+                }
+                // Validate pointer before iterating to prevent crash from use-after-free
+                if (value.len > 0 and !isValidSlicePointer(ptr.child, value.ptr)) {
+                    std.log.err("zigValueToJs: invalid slice pointer detected (0x{x}), returning empty array", .{@intFromPtr(value.ptr)});
+                    return self.newArray(0).toValue();
                 }
                 const safe_len = @min(value.len, MAX_JS_ARRAY_LENGTH);
                 var js_arr = self.newArray(@intCast(safe_len));

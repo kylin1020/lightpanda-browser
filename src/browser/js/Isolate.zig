@@ -22,8 +22,33 @@ const v8 = js.v8;
 
 const Isolate = @This();
 
-/// Maximum string length that V8 can handle (c_int max)
-const MAX_STRING_LENGTH: usize = @intCast(std.math.maxInt(c_int));
+/// Maximum string length that V8 can handle (V8's actual limit is ~512MB, use 256MB to be safe)
+const MAX_STRING_LENGTH: usize = 256 * 1024 * 1024;
+
+/// Check if a pointer looks valid (not NULL, not poison patterns)
+/// Returns true if pointer appears valid, false otherwise
+fn isValidPointer(ptr: [*]const u8) bool {
+    const addr = @intFromPtr(ptr);
+    // Check for NULL
+    if (addr == 0) return false;
+    // Check for common poison/debug patterns that indicate use-after-free or uninitialized memory
+    // 0xaaaaaaaaaaaaaaaa - common poison pattern
+    // 0xcdcdcdcdcdcdcdcd - MSVC uninitialized heap
+    // 0xdddddddddddddddd - MSVC freed memory
+    // 0xfeeefeeefeeefeee - MSVC freed memory
+    // 0xdeadbeefdeadbeef - common debug marker
+    if (addr == 0xaaaaaaaaaaaaaaaa or
+        addr == 0xcdcdcdcdcdcdcdcd or
+        addr == 0xdddddddddddddddd or
+        addr == 0xfeeefeeefeeefeee or
+        addr == 0xdeadbeefdeadbeef)
+    {
+        return false;
+    }
+    // Check for very low addresses (likely invalid on modern systems)
+    if (addr < 0x1000) return false;
+    return true;
+}
 
 handle: *v8.Isolate,
 
@@ -76,9 +101,20 @@ pub fn throwException(self: Isolate, value: *const v8.Value) *const v8.Value {
 }
 
 pub fn initStringHandle(self: Isolate, str: []const u8) *const v8.String {
-    // Truncate string if it exceeds V8's maximum length (c_int max)
+    // Handle empty strings
+    if (str.len == 0) {
+        return v8.v8__String__NewFromUtf8(self.handle, "", v8.kNormal, 0).?;
+    }
+    // Validate pointer to prevent crashes from use-after-free or uninitialized memory
+    if (!isValidPointer(str.ptr)) {
+        std.log.err("initStringHandle: invalid pointer 0x{x}, returning empty string", .{@intFromPtr(str.ptr)});
+        return v8.v8__String__NewFromUtf8(self.handle, "", v8.kNormal, 0).?;
+    }
+    // Truncate string if it exceeds V8's maximum length
     const safe_len = @min(str.len, MAX_STRING_LENGTH);
-    return v8.v8__String__NewFromUtf8(self.handle, str.ptr, v8.kNormal, @as(c_int, @intCast(safe_len))).?;
+    // Try to create the string, fall back to empty string if V8 fails
+    return v8.v8__String__NewFromUtf8(self.handle, str.ptr, v8.kNormal, @as(c_int, @intCast(safe_len))) orelse
+        v8.v8__String__NewFromUtf8(self.handle, "", v8.kNormal, 0).?;
 }
 
 pub fn createError(self: Isolate, msg: []const u8) *const v8.Value {
