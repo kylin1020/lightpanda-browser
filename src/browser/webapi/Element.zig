@@ -963,11 +963,31 @@ pub fn getBoundingClientRect(self: *Element, page: *Page) !*DOMRect {
     // Use sibling position for x coordinate to ensure siblings have different x values
     const x = calculateSiblingPosition(self.asNode());
 
+    // Apply fingerprint-based noise to prevent ClientRects fingerprinting
+    // The noise is deterministic based on the profile seed and element position
+    const profile = page.fingerprintProfile();
+    const seed = profile.canvas.seed;
+
+    // Generate deterministic noise based on seed and position
+    var hasher = std.hash.Fnv1a_64.init();
+    hasher.update(seed);
+    hasher.update(std.mem.asBytes(&x));
+    hasher.update(std.mem.asBytes(&y));
+    const hash = hasher.final();
+
+    // Add very small noise (0.0 to 0.01 pixels) - enough to fingerprint but not visibly affect layout
+    var prng = std.Random.DefaultPrng.init(hash);
+    const random = prng.random();
+    const noise_x = random.float(f64) * 0.01;
+    const noise_y = random.float(f64) * 0.01;
+    const noise_w = random.float(f64) * 0.01;
+    const noise_h = random.float(f64) * 0.01;
+
     return page._factory.create(DOMRect{
-        ._x = x,
-        ._y = y,
-        ._width = dims.width,
-        ._height = dims.height,
+        ._x = x + noise_x,
+        ._y = y + noise_y,
+        ._width = dims.width + noise_w,
+        ._height = dims.height + noise_h,
     });
 }
 

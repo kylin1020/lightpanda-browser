@@ -48,6 +48,8 @@ pub const Type = union(enum) {
     audio_context: *@import("AudioContext.zig").AudioContext,
     offline_audio_context: *@import("AudioContext.zig").OfflineAudioContext,
     base_audio_context: *@import("AudioContext.zig").BaseAudioContext,
+    rtc_peer_connection: *@import("RTCPeerConnection.zig").RTCPeerConnection,
+    font_face_set: *@import("FontFaceSet.zig").FontFaceSet,
 };
 
 pub fn init(page: *Page) !*EventTarget {
@@ -144,6 +146,8 @@ pub fn format(self: *EventTarget, writer: *std.Io.Writer) !void {
         .audio_context => writer.writeAll("<AudioContext>"),
         .offline_audio_context => writer.writeAll("<OfflineAudioContext>"),
         .base_audio_context => writer.writeAll("<BaseAudioContext>"),
+        .rtc_peer_connection => writer.writeAll("<RTCPeerConnection>"),
+        .font_face_set => writer.writeAll("<FontFaceSet>"),
     };
 }
 
@@ -166,6 +170,8 @@ pub fn toString(self: *EventTarget) []const u8 {
         .audio_context => return "[object AudioContext]",
         .offline_audio_context => return "[object OfflineAudioContext]",
         .base_audio_context => return "[object BaseAudioContext]",
+        .rtc_peer_connection => return "[object RTCPeerConnection]",
+        .font_face_set => return "[object FontFaceSet]",
     };
 }
 

@@ -21,6 +21,12 @@ const lp = @import("lightpanda");
 const builtin = @import("builtin");
 const Allocator = std.mem.Allocator;
 
+// C library functions for timezone handling
+const c_lib = @cImport({
+    @cInclude("stdlib.h");
+    @cInclude("time.h");
+});
+
 const log = lp.log;
 const App = lp.App;
 const profiles = lp.profiles;
@@ -78,6 +84,15 @@ fn run(allocator: Allocator, main_arena: Allocator, sighandler: *SigHandler) !vo
     }
 
     const fingerprint_profile = try args.fingerprintProfile(main_arena);
+
+    // Set timezone from fingerprint profile before V8/ICU initialization
+    // This affects Date objects and Intl.DateTimeFormat in JavaScript
+    if (fingerprint_profile.timezone.len > 0) {
+        const tz_z = try std.fmt.allocPrintSentinel(main_arena, "{s}", .{fingerprint_profile.timezone}, 0);
+        _ = c_lib.setenv("TZ", tz_z, 1);
+        // Force libc to re-read TZ
+        c_lib.tzset();
+    }
 
     // User-Agent comes from fingerprint profile
     const user_agent = blk: {

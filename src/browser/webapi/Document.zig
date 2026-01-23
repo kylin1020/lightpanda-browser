@@ -55,6 +55,7 @@ _style_sheets: ?*StyleSheetList = null,
 _write_insertion_point: ?*Node = null,
 _script_created_parser: ?Parser.Streaming = null,
 _adopted_style_sheets: ?js.Object.Global = null,
+_fonts: ?*@import("FontFaceSet.zig").FontFaceSet = null,
 
 pub const Type = union(enum) {
     generic,
@@ -402,6 +403,15 @@ pub fn getActiveElement(self: *Document) ?*Element {
 
     // Fallback to document element
     return self.getDocumentElement();
+}
+
+pub fn getFonts(self: *Document, page: *Page) !*@import("FontFaceSet.zig").FontFaceSet {
+    if (self._fonts) |fonts| {
+        return fonts;
+    }
+    const fonts = try @import("FontFaceSet.zig").FontFaceSet.init(page);
+    self._fonts = fonts;
+    return fonts;
 }
 
 pub fn getStyleSheets(self: *Document, page: *Page) !*StyleSheetList {
@@ -928,6 +938,7 @@ pub const JsApi = struct {
     pub const implementation = bridge.accessor(Document.getImplementation, null, .{});
     pub const activeElement = bridge.accessor(Document.getActiveElement, null, .{});
     pub const styleSheets = bridge.accessor(Document.getStyleSheets, null, .{});
+    pub const fonts = bridge.accessor(Document.getFonts, null, .{});
     pub const contentType = bridge.accessor(Document.getContentType, null, .{});
     pub const characterSet = bridge.accessor(Document.getCharacterSet, null, .{});
     pub const charset = bridge.accessor(Document.getCharacterSet, null, .{});

@@ -28,8 +28,10 @@ pub fn registerTypes() []const type {
 }
 
 /// BatteryManager provides information about the system's battery charge level
+/// Values are configurable via the fingerprint profile for anti-fingerprinting
 pub const BatteryManager = struct {
     _proto: *EventTarget,
+    _page: *Page,
     _on_charging_change: ?js.Function.Global = null,
     _on_charging_time_change: ?js.Function.Global = null,
     _on_discharging_time_change: ?js.Function.Global = null,
@@ -38,6 +40,7 @@ pub const BatteryManager = struct {
     pub fn init(page: *Page) !*BatteryManager {
         return page._factory.eventTarget(BatteryManager{
             ._proto = undefined,
+            ._page = page,
         });
     }
 
@@ -46,25 +49,29 @@ pub const BatteryManager = struct {
     }
 
     /// Returns whether the battery is currently being charged
-    pub fn getCharging(_: *const BatteryManager) bool {
-        return true; // Default: always plugged in (typical for desktops/servers)
+    /// Value from fingerprint profile
+    pub fn getCharging(self: *const BatteryManager) bool {
+        return self._page.fingerprintProfile().battery.charging;
     }
 
     /// Returns the time remaining until the battery is fully charged (in seconds)
     /// Returns Infinity if not charging, or 0 if fully charged
-    pub fn getChargingTime(_: *const BatteryManager) f64 {
-        return 0.0; // Fully charged
+    /// Value from fingerprint profile
+    pub fn getChargingTime(self: *const BatteryManager) f64 {
+        return self._page.fingerprintProfile().battery.chargingTime;
     }
 
     /// Returns the time remaining until the battery is empty (in seconds)
     /// Returns Infinity if charging or if can't be determined
-    pub fn getDischargingTime(_: *const BatteryManager) f64 {
-        return std.math.inf(f64); // Plugged in, won't discharge
+    /// Value from fingerprint profile
+    pub fn getDischargingTime(self: *const BatteryManager) f64 {
+        return self._page.fingerprintProfile().battery.dischargingTime;
     }
 
     /// Returns the battery charge level as a value between 0.0 and 1.0
-    pub fn getLevel(_: *const BatteryManager) f64 {
-        return 1.0; // Fully charged
+    /// Value from fingerprint profile
+    pub fn getLevel(self: *const BatteryManager) f64 {
+        return self._page.fingerprintProfile().battery.level;
     }
 
     pub fn getOnChargingChange(self: *const BatteryManager) ?js.Function.Global {

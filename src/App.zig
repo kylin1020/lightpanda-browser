@@ -71,6 +71,7 @@ pub const FingerprintProfile = struct {
     audio: AudioProfile,
     connection: ConnectionProfile,
     tls: TlsProfile = .{},
+    battery: BatteryProfile = .{},
 
     pub const UserAgentData = struct {
         brands: []const Brand,
@@ -155,6 +156,19 @@ pub const FingerprintProfile = struct {
         /// Supported Safari values: "safari15_5", "safari15_3", etc.
         /// See curl-impersonate documentation for full list
         impersonateTarget: []const u8 = "chrome116",
+    };
+
+    /// Battery status profile for fingerprinting
+    /// Controls the values returned by navigator.getBattery()
+    pub const BatteryProfile = struct {
+        /// Whether the battery is currently being charged
+        charging: bool = true,
+        /// Battery charge level (0.0 to 1.0)
+        level: f64 = 1.0,
+        /// Time until battery is fully charged (seconds), 0 if fully charged
+        chargingTime: f64 = 0.0,
+        /// Time until battery is empty (seconds), Infinity if charging
+        dischargingTime: f64 = std.math.inf(f64),
     };
 
     pub fn defaultMacOS() FingerprintProfile {

@@ -1275,4 +1275,6 @@ pub const JsApis = flattenTypes(&.{
     @import("../webapi/AudioContext.zig"),
     @import("../webapi/Permissions.zig"),
     @import("../webapi/BatteryManager.zig"),
+    @import("../webapi/RTCPeerConnection.zig"),
+    @import("../webapi/FontFaceSet.zig"),
 });

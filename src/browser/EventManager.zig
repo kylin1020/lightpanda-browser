@@ -157,6 +157,8 @@ pub fn dispatch(self: *EventManager, target: *EventTarget, event: *Event) !void 
         .audio_context,
         .offline_audio_context,
         .base_audio_context,
+        .rtc_peer_connection,
+        .font_face_set,
         .generic,
         => {
             const list = self.lookup.get(@intFromPtr(target)) orelse return;
