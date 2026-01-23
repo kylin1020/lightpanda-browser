@@ -28,7 +28,7 @@ pub const c = @cImport({
 /// Declared here for use when CURL_IMPERSONATE is enabled
 pub extern fn curl_easy_impersonate(curl: *c.CURL, target: [*c]const u8, default_headers: c_int) c.CURLcode;
 
-pub const ENABLE_DEBUG = false;
+pub const ENABLE_DEBUG = true;
 /// TLS fingerprinting via curl-impersonate is enabled
 /// curl-impersonate provides browser-like TLS/HTTP2 fingerprints
 pub const ENABLE_IMPERSONATE = true;
@@ -134,13 +134,14 @@ pub const Connection = struct {
         if (comptime ENABLE_IMPERSONATE) {
             if (opts.impersonate_target) |target| {
                 // curl_easy_impersonate(handle, target, default_headers)
-                // default_headers=1 means use browser-like headers (sec-ch-ua, etc.)
+                // default_headers=0: Only use TLS fingerprinting, don't add sec-ch-ua headers
+                // This avoids version mismatch between curl-impersonate's headers and our fingerprint profile
                 // Create null-terminated copy for C interop
                 var target_buf: [64:0]u8 = undefined;
                 if (target.len < target_buf.len) {
                     @memcpy(target_buf[0..target.len], target);
                     target_buf[target.len] = 0;
-                    const result = curl_easy_impersonate(easy, &target_buf, 1);
+                    const result = curl_easy_impersonate(easy, &target_buf, 0);
                     if (result != c.CURLE_OK) {
                         log.warn(.app, "curl_easy_impersonate failed", .{ .target = target, .err = result });
                     }

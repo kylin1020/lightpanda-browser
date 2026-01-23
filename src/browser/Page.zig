@@ -407,6 +407,34 @@ pub fn navigate(self: *Page, request_url: [:0]const u8, opts: NavigateOpts) !voi
     if (opts.header) |hdr| {
         try headers.add(hdr);
     }
+
+    // Add browser fingerprint headers to match real Chrome behavior
+    const profile = self.fingerprintProfile();
+    try headers.add("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+    try headers.add("Accept-Language: en-US,en;q=0.9");
+    try headers.add("Sec-Fetch-Dest: document");
+    try headers.add("Sec-Fetch-Mode: navigate");
+    try headers.add("Sec-Fetch-Site: none");
+    try headers.add("Sec-Fetch-User: ?1");
+    try headers.add("Upgrade-Insecure-Requests: 1");
+
+    // Add Sec-CH-UA headers based on fingerprint profile
+    // Format: "Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"
+    var sec_ch_ua_buf: [256]u8 = undefined;
+    const sec_ch_ua = std.fmt.bufPrintZ(&sec_ch_ua_buf, "Sec-CH-UA: \"Google Chrome\";v=\"{s}\", \"Chromium\";v=\"{s}\", \"Not_A Brand\";v=\"24\"", .{
+        profile.chromeVersion[0..3], // Extract major version (e.g., "131" from "131.0.0.0")
+        profile.chromeVersion[0..3],
+    }) catch "Sec-CH-UA: \"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"";
+    try headers.add(sec_ch_ua.ptr);
+
+    try headers.add("Sec-CH-UA-Mobile: ?0");
+
+    var sec_ch_ua_platform_buf: [64]u8 = undefined;
+    const sec_ch_ua_platform = std.fmt.bufPrintZ(&sec_ch_ua_platform_buf, "Sec-CH-UA-Platform: \"{s}\"", .{
+        profile.userAgentData.platform,
+    }) catch "Sec-CH-UA-Platform: \"macOS\"";
+    try headers.add(sec_ch_ua_platform.ptr);
+
     try self.requestCookie(.{ .is_navigation = true }).headersForRequest(self.arena, self.url, &headers);
 
     // We dispatch page_navigate event before sending the request.

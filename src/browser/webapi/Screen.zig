@@ -19,6 +19,7 @@
 const js = @import("../js/js.zig");
 const Page = @import("../Page.zig");
 const EventTarget = @import("EventTarget.zig");
+const log = @import("../../log.zig");
 
 pub fn registerTypes() []const type {
     return &.{
@@ -44,27 +45,39 @@ pub fn asEventTarget(self: *Screen) *EventTarget {
 }
 
 pub fn getWidth(_: *const Screen, page: *Page) u32 {
-    return page.fingerprintProfile().screen.width;
+    const value = page.fingerprintProfile().screen.width;
+    log.debug(.browser, "FP screen.width", .{ .value = value });
+    return value;
 }
 
 pub fn getHeight(_: *const Screen, page: *Page) u32 {
-    return page.fingerprintProfile().screen.height;
+    const value = page.fingerprintProfile().screen.height;
+    log.debug(.browser, "FP screen.height", .{ .value = value });
+    return value;
 }
 
 pub fn getAvailWidth(_: *const Screen, page: *Page) u32 {
-    return page.fingerprintProfile().screen.availWidth;
+    const value = page.fingerprintProfile().screen.availWidth;
+    log.debug(.browser, "FP screen.availWidth", .{ .value = value });
+    return value;
 }
 
 pub fn getAvailHeight(_: *const Screen, page: *Page) u32 {
-    return page.fingerprintProfile().screen.availHeight;
+    const value = page.fingerprintProfile().screen.availHeight;
+    log.debug(.browser, "FP screen.availHeight", .{ .value = value });
+    return value;
 }
 
 pub fn getColorDepth(_: *const Screen, page: *Page) u32 {
-    return page.fingerprintProfile().screen.colorDepth;
+    const value = page.fingerprintProfile().screen.colorDepth;
+    log.debug(.browser, "FP screen.colorDepth", .{ .value = value });
+    return value;
 }
 
 pub fn getPixelDepth(_: *const Screen, page: *Page) u32 {
-    return page.fingerprintProfile().screen.pixelDepth;
+    const value = page.fingerprintProfile().screen.pixelDepth;
+    log.debug(.browser, "FP screen.pixelDepth", .{ .value = value });
+    return value;
 }
 
 pub fn getOrientation(self: *Screen, page: *Page) !*Orientation {

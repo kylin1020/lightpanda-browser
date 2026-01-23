@@ -370,31 +370,45 @@ pub fn getFramesLength(self: *const Window) u32 {
 }
 
 pub fn getInnerWidth(_: *const Window, page: *Page) u32 {
-    return page.fingerprintProfile().window.innerWidth;
+    const value = page.fingerprintProfile().window.innerWidth;
+    log.debug(.browser, "FP win.innerWidth", .{ .value = value });
+    return value;
 }
 
 pub fn getInnerHeight(_: *const Window, page: *Page) u32 {
-    return page.fingerprintProfile().window.innerHeight;
+    const value = page.fingerprintProfile().window.innerHeight;
+    log.debug(.browser, "FP win.innerHeight", .{ .value = value });
+    return value;
 }
 
 pub fn getOuterWidth(_: *const Window, page: *Page) u32 {
-    return page.fingerprintProfile().window.outerWidth;
+    const value = page.fingerprintProfile().window.outerWidth;
+    log.debug(.browser, "FP win.outerWidth", .{ .value = value });
+    return value;
 }
 
 pub fn getOuterHeight(_: *const Window, page: *Page) u32 {
-    return page.fingerprintProfile().window.outerHeight;
+    const value = page.fingerprintProfile().window.outerHeight;
+    log.debug(.browser, "FP win.outerHeight", .{ .value = value });
+    return value;
 }
 
 pub fn getScreenX(_: *const Window, page: *Page) i32 {
-    return page.fingerprintProfile().window.screenX;
+    const value = page.fingerprintProfile().window.screenX;
+    log.debug(.browser, "FP win.screenX", .{ .value = value });
+    return value;
 }
 
 pub fn getScreenY(_: *const Window, page: *Page) i32 {
-    return page.fingerprintProfile().window.screenY;
+    const value = page.fingerprintProfile().window.screenY;
+    log.debug(.browser, "FP win.screenY", .{ .value = value });
+    return value;
 }
 
 pub fn getDevicePixelRatio(_: *const Window, page: *Page) f64 {
-    return page.fingerprintProfile().window.devicePixelRatio;
+    const value = page.fingerprintProfile().window.devicePixelRatio;
+    log.debug(.browser, "FP win.devicePixelRatio", .{});
+    return value;
 }
 
 pub fn getScrollX(self: *const Window) u32 {

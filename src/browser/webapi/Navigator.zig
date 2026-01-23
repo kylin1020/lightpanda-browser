@@ -22,93 +22,134 @@ const Page = @import("../Page.zig");
 const App = @import("../../App.zig");
 const Permissions = @import("Permissions.zig");
 const BatteryManager = @import("BatteryManager.zig");
+const log = @import("../../log.zig");
 
 const Navigator = @This();
 _pad: bool = false,
 
+// Debug flag for fingerprint tracking
+const FINGERPRINT_DEBUG = true;
+
 pub const init: Navigator = .{};
 
 pub fn getUserAgent(_: *const Navigator, page: *Page) []const u8 {
-    return page.fingerprintProfile().userAgent;
+    const value = page.fingerprintProfile().userAgent;
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.userAgent", .{ .value = value });
+    return value;
 }
 
 pub fn getAppName(_: *const Navigator) []const u8 {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.appName", .{ .value = "Netscape" });
     return "Netscape";
 }
 
 pub fn getAppCodeName(_: *const Navigator) []const u8 {
-    return "Netscape";
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.appCodeName", .{ .value = "Mozilla" });
+    return "Mozilla";
 }
 
-pub fn getAppVersion(_: *const Navigator) []const u8 {
-    return "1.0";
+pub fn getAppVersion(_: *const Navigator, page: *Page) []const u8 {
+    // Real Chrome returns the full user agent string without "Mozilla/"
+    // e.g., "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36..."
+    const ua = page.fingerprintProfile().userAgent;
+    // Skip "Mozilla/" prefix if present
+    if (std.mem.startsWith(u8, ua, "Mozilla/")) {
+        const value = ua[8..];
+        if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.appVersion", .{ .value = value });
+        return value;
+    }
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.appVersion", .{ .value = ua });
+    return ua;
 }
 
 pub fn getPlatform(_: *const Navigator, page: *Page) []const u8 {
-    return page.fingerprintProfile().platform;
+    const value = page.fingerprintProfile().platform;
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.platform", .{ .value = value });
+    return value;
 }
 
 pub fn getLanguage(_: *const Navigator, page: *Page) []const u8 {
-    return page.fingerprintProfile().language;
+    const value = page.fingerprintProfile().language;
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.language", .{ .value = value });
+    return value;
 }
 
 pub fn getLanguages(_: *const Navigator, page: *Page) []const []const u8 {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.languages", .{});
     return page.fingerprintProfile().languages;
 }
 
 pub fn getOnLine(_: *const Navigator) bool {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.onLine", .{ .value = true });
     return true;
 }
 
 pub fn getCookieEnabled(_: *const Navigator) bool {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.cookieEnabled", .{ .value = true });
     return true;
 }
 
 pub fn getHardwareConcurrency(_: *const Navigator, page: *Page) u32 {
-    return page.fingerprintProfile().hardwareConcurrency;
+    const value = page.fingerprintProfile().hardwareConcurrency;
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.hwConcurrency", .{ .value = value });
+    return value;
 }
 
 pub fn getMaxTouchPoints(_: *const Navigator, page: *Page) u32 {
-    return page.fingerprintProfile().maxTouchPoints;
+    const value = page.fingerprintProfile().maxTouchPoints;
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.maxTouchPts", .{ .value = value });
+    return value;
 }
 
 /// Returns the vendor name
 pub fn getVendor(_: *const Navigator, page: *Page) []const u8 {
-    return page.fingerprintProfile().vendor;
+    const value = page.fingerprintProfile().vendor;
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.vendor", .{ .value = value });
+    return value;
 }
 
 /// Returns the product name (typically "Gecko" for compatibility)
 pub fn getProduct(_: *const Navigator, page: *Page) []const u8 {
-    return page.fingerprintProfile().product;
+    const value = page.fingerprintProfile().product;
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.product", .{ .value = value });
+    return value;
 }
 
 /// Returns whether Java is enabled (always false)
 pub fn javaEnabled(_: *const Navigator) bool {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.javaEnabled", .{});
     return false;
 }
 
 /// Returns whether the browser is controlled by automation (always false)
 pub fn getWebdriver(_: *const Navigator) bool {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.webdriver", .{ .value = false });
     return false;
 }
 
 pub fn getUserAgentData(_: *const Navigator, page: *Page) App.FingerprintProfile.UserAgentData {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.userAgentData", .{});
     return page.fingerprintProfile().userAgentData;
 }
 
 pub fn getPlugins(_: *const Navigator) []const []const u8 {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.plugins EMPTY", .{});
     return &.{};
 }
 
 pub fn getDeviceMemory(_: *const Navigator, page: *Page) u32 {
-    return page.fingerprintProfile().deviceMemory;
+    const value = page.fingerprintProfile().deviceMemory;
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.deviceMemory", .{ .value = value });
+    return value;
 }
 
 pub fn getConnection(_: *const Navigator, page: *Page) !*NetworkInformation {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.connection", .{});
     return page._factory.create(NetworkInformation{ ._page = page });
 }
 
 pub fn getPermissions(_: *const Navigator, page: *Page) !*Permissions.Permissions {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.permissions", .{});
     return Permissions.Permissions.init(page);
 }
 
