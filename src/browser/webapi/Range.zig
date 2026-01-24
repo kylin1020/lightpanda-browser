@@ -23,6 +23,8 @@ const Page = @import("../Page.zig");
 const Node = @import("Node.zig");
 const DocumentFragment = @import("DocumentFragment.zig");
 const AbstractRange = @import("AbstractRange.zig");
+const DOMRect = @import("DOMRect.zig");
+const DOMRectList = @import("DOMRectList.zig");
 
 const Range = @This();
 
@@ -555,6 +557,28 @@ fn writeTextContent(self: *const Range, writer: *std.Io.Writer) !void {
     // For now, just return empty
 }
 
+pub fn getBoundingClientRect(_: *const Range, page: *Page) !*DOMRect {
+    return page._factory.create(DOMRect{
+        ._x = 0,
+        ._y = 0,
+        ._width = 0,
+        ._height = 0,
+    });
+}
+
+pub fn getClientRects(_: *const Range, page: *Page) !*DOMRectList {
+    // Return a list with one default rect for fingerprint consistency
+    const rect = try page._factory.create(DOMRect{
+        ._x = 0,
+        ._y = 0,
+        ._width = 0,
+        ._height = 0,
+    });
+    const rects = try page.call_arena.alloc(*DOMRect, 1);
+    rects[0] = rect;
+    return page._factory.create(DOMRectList.init(rects));
+}
+
 pub const JsApi = struct {
     pub const bridge = js.Bridge(Range);
 
@@ -593,6 +617,8 @@ pub const JsApi = struct {
     pub const surroundContents = bridge.function(Range.surroundContents, .{ .dom_exception = true });
     pub const createContextualFragment = bridge.function(Range.createContextualFragment, .{ .dom_exception = true });
     pub const toString = bridge.function(Range.toString, .{ .dom_exception = true });
+    pub const getBoundingClientRect = bridge.function(Range.getBoundingClientRect, .{});
+    pub const getClientRects = bridge.function(Range.getClientRects, .{});
 };
 
 const testing = @import("../../testing.zig");

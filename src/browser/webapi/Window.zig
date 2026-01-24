@@ -42,6 +42,7 @@ const storage = @import("storage/storage.zig");
 const Element = @import("Element.zig");
 const CSSStyleProperties = @import("css/CSSStyleProperties.zig");
 const CustomElementRegistry = @import("CustomElementRegistry.zig");
+const SpeechSynthesis = @import("SpeechSynthesis.zig").SpeechSynthesis;
 
 const Window = @This();
 
@@ -63,6 +64,7 @@ _location: *Location,
 _timer_id: u30 = 0,
 _timers: std.AutoHashMapUnmanaged(u32, *ScheduleCallback) = .{},
 _custom_elements: CustomElementRegistry = .{},
+_speech_synthesis: SpeechSynthesis = SpeechSynthesis.init,
 _scroll_pos: struct {
     x: u32,
     y: u32,
@@ -115,6 +117,10 @@ pub fn getCSS(self: *Window) *CSS {
 
 pub fn getPerformance(self: *Window) *Performance {
     return &self._performance;
+}
+
+pub fn getSpeechSynthesis(self: *Window) *SpeechSynthesis {
+    return &self._speech_synthesis;
 }
 
 pub fn getLocalStorage(self: *const Window) *storage.Lookup {
@@ -309,11 +315,9 @@ pub fn getComputedStyle(_: *const Window, element: *Element, pseudo_element: ?[]
 }
 
 pub fn getIsSecureContext(_: *const Window) bool {
-    // Return false since we don't have secure-context-only APIs implemented
-    // (webcam, geolocation, clipboard, etc.)
-    // This is safer and could help avoid processing errors by hinting at
-    // sites not to try to access those features
-    return false;
+    // Return true to appear as a normal browser accessing HTTPS sites
+    // Most modern websites expect secure context for many APIs
+    return true;
 }
 
 pub fn postMessage(self: *Window, message: js.Value.Global, target_origin: ?[]const u8, page: *Page) !void {
@@ -350,8 +354,22 @@ pub fn atob(_: *const Window, input: []const u8, page: *Page) ![]const u8 {
     return decoded;
 }
 
-pub fn getFrame(_: *Window, _: usize) !?*Window {
-    // TODO return the iframe's window.
+pub fn getFrame(self: *Window, index: usize) !?*Window {
+    const TreeWalker = @import("TreeWalker.zig");
+    var walker = TreeWalker.Full.init(self._document.asNode(), .{});
+
+    var current_idx: usize = 0;
+    while (walker.next()) |node| {
+        if (node.is(Element.Html.IFrame) != null) {
+            if (current_idx == index) {
+                // Return the main window for iframe access
+                // All iframes share the same window in this implementation
+                return self;
+            }
+            current_idx += 1;
+        }
+    }
+
     return null;
 }
 
@@ -678,6 +696,7 @@ pub const JsApi = struct {
     pub const navigator = bridge.accessor(Window.getNavigator, null, .{ .cache = "navigator" });
     pub const screen = bridge.accessor(Window.getScreen, null, .{ .cache = "screen" });
     pub const performance = bridge.accessor(Window.getPerformance, null, .{ .cache = "performance" });
+    pub const speechSynthesis = bridge.accessor(Window.getSpeechSynthesis, null, .{ .cache = "speechSynthesis" });
     pub const localStorage = bridge.accessor(Window.getLocalStorage, null, .{ .cache = "localStorage" });
     pub const sessionStorage = bridge.accessor(Window.getSessionStorage, null, .{ .cache = "sessionStorage" });
     pub const document = bridge.accessor(Window.getDocument, null, .{ .cache = "document" });

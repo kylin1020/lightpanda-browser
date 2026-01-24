@@ -36,6 +36,7 @@ const DOMStringMap = @import("element/DOMStringMap.zig");
 const CSSStyleProperties = @import("css/CSSStyleProperties.zig");
 
 pub const DOMRect = @import("DOMRect.zig");
+pub const DOMRectList = @import("DOMRectList.zig");
 pub const Svg = @import("element/Svg.zig");
 pub const Html = @import("element/Html.zig");
 pub const Attribute = @import("element/Attribute.zig");
@@ -991,12 +992,24 @@ pub fn getBoundingClientRect(self: *Element, page: *Page) !*DOMRect {
     });
 }
 
-pub fn getClientRects(self: *Element, page: *Page) ![]DOMRect {
-    if (!try self.checkVisibility(page)) {
-        return &.{};
-    }
-    const ptr = try self.getBoundingClientRect(page);
-    return ptr[0..1];
+pub fn getClientRects(self: *Element, page: *Page) !*DOMRectList {
+    // Always return at least one rect for fingerprint consistency
+    // Real browsers only return empty list for truly invisible elements
+    const rect = self.getBoundingClientRect(page) catch {
+        // If getBoundingClientRect fails, return a default rect
+        const default_rect = try page._factory.create(DOMRect{
+            ._x = 0,
+            ._y = 0,
+            ._width = 0,
+            ._height = 0,
+        });
+        const rects = try page.call_arena.alloc(*DOMRect, 1);
+        rects[0] = default_rect;
+        return page._factory.create(DOMRectList.init(rects));
+    };
+    const rects = try page.call_arena.alloc(*DOMRect, 1);
+    rects[0] = rect;
+    return page._factory.create(DOMRectList.init(rects));
 }
 
 // Calculates document position by counting all nodes that appear before this one

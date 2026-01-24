@@ -19,6 +19,7 @@
 const js = @import("../../../js/js.zig");
 const Page = @import("../../../Page.zig");
 const Window = @import("../../Window.zig");
+const Document = @import("../../Document.zig");
 const Node = @import("../../Node.zig");
 const Element = @import("../../Element.zig");
 const HtmlElement = @import("../Html.zig");
@@ -33,8 +34,43 @@ pub fn asNode(self: *IFrame) *Node {
     return self.asElement().asNode();
 }
 
+/// Returns the Window object for the iframe.
+/// For sandbox iframes, this returns the main page's window to allow basic DOM access.
+/// Note: Full iframe isolation would require separate JS contexts which is not implemented.
 pub fn getContentWindow(_: *const IFrame, page: *Page) *Window {
     return page.window;
+}
+
+/// Returns the Document object for the iframe.
+/// For sandbox iframes with allow-same-origin, returns the main document.
+/// This enables scripts to access document.createElement and other DOM methods.
+pub fn getContentDocument(_: *const IFrame, page: *Page) *Document {
+    return page.document;
+}
+
+/// Returns the sandbox attribute value.
+/// Empty string means sandboxing is enabled with all restrictions.
+pub fn getSandbox(self: *const IFrame, page: *Page) ![]const u8 {
+    const element = @constCast(self).asElement();
+    return (try element.getAttribute("sandbox", page)) orelse "";
+}
+
+/// Sets the sandbox attribute.
+pub fn setSandbox(self: *IFrame, value: []const u8, page: *Page) !void {
+    const element = self.asElement();
+    try element.setAttribute("sandbox", value, page);
+}
+
+/// Returns the src attribute.
+pub fn getSrc(self: *const IFrame, page: *Page) ![]const u8 {
+    const element = @constCast(self).asElement();
+    return (try element.getAttribute("src", page)) orelse "";
+}
+
+/// Sets the src attribute.
+pub fn setSrc(self: *IFrame, value: []const u8, page: *Page) !void {
+    const element = self.asElement();
+    try element.setAttribute("src", value, page);
 }
 
 pub const JsApi = struct {
@@ -47,4 +83,7 @@ pub const JsApi = struct {
     };
 
     pub const contentWindow = bridge.accessor(IFrame.getContentWindow, null, .{});
+    pub const contentDocument = bridge.accessor(IFrame.getContentDocument, null, .{});
+    pub const sandbox = bridge.accessor(IFrame.getSandbox, IFrame.setSandbox, .{});
+    pub const src = bridge.accessor(IFrame.getSrc, IFrame.setSrc, .{});
 };

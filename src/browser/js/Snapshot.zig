@@ -125,7 +125,27 @@ pub fn createGlobalTemplate(isolate: *v8.Isolate, templates: anytype) *const v8.
     const window_index = comptime bridge.JsApiLookup.getId(Window.JsApi);
     v8.v8__FunctionTemplate__Inherit(js_global, templates[window_index]);
 
-    return v8.v8__FunctionTemplate__InstanceTemplate(js_global).?;
+    const instance = v8.v8__FunctionTemplate__InstanceTemplate(js_global).?;
+
+    // V8 interceptors (indexed property handlers) are not inherited through
+    // FunctionTemplate inheritance. We need to explicitly set them on the
+    // global template for window[N] frame access to work.
+    if (@hasDecl(Window.JsApi, "index")) {
+        var configuration: v8.IndexedPropertyHandlerConfiguration = .{
+            .getter = Window.JsApi.index.getter,
+            .setter = null,
+            .query = null,
+            .deleter = null,
+            .enumerator = null,
+            .definer = null,
+            .descriptor = null,
+            .data = null,
+            .flags = 0,
+        };
+        v8.v8__ObjectTemplate__SetIndexedHandler(instance, &configuration);
+    }
+
+    return instance;
 }
 
 pub fn create() !Snapshot {

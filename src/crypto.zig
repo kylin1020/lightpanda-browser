@@ -236,3 +236,14 @@ pub extern fn EVP_PKEY_CTX_free(ctx: ?*EVP_PKEY_CTX) void;
 pub extern fn EVP_PKEY_derive_init(ctx: ?*EVP_PKEY_CTX) c_int;
 pub extern fn EVP_PKEY_derive(ctx: ?*EVP_PKEY_CTX, key: [*c]u8, out_key_len: [*c]usize) c_int;
 pub extern fn EVP_PKEY_derive_set_peer(ctx: ?*EVP_PKEY_CTX, peer: [*c]EVP_PKEY) c_int;
+
+// One-shot hash functions
+pub const SHA_DIGEST_LENGTH = 20;
+pub const SHA256_DIGEST_LENGTH = 32;
+pub const SHA384_DIGEST_LENGTH = 48;
+pub const SHA512_DIGEST_LENGTH = 64;
+
+pub extern fn SHA1(data: [*]const u8, len: usize, out: [*]u8) [*]u8;
+pub extern fn SHA256(data: [*]const u8, len: usize, out: [*]u8) [*]u8;
+pub extern fn SHA384(data: [*]const u8, len: usize, out: [*]u8) [*]u8;
+pub extern fn SHA512(data: [*]const u8, len: usize, out: [*]u8) [*]u8;

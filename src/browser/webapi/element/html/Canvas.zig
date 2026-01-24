@@ -66,14 +66,14 @@ const DrawingContext = union(enum) {
     webgl: *WebGLRenderingContext,
 };
 
-pub fn getContext(_: *Canvas, context_type: []const u8, page: *Page) !?DrawingContext {
+pub fn getContext(self: *Canvas, context_type: []const u8, _: ?js.Object, page: *Page) !?DrawingContext {
     if (std.mem.eql(u8, context_type, "2d")) {
-        const ctx = try page._factory.create(CanvasRenderingContext2D{});
+        const ctx = try page._factory.create(CanvasRenderingContext2D{ ._canvas = self });
         return .{ .@"2d" = ctx };
     }
 
     if (std.mem.eql(u8, context_type, "webgl") or std.mem.eql(u8, context_type, "experimental-webgl")) {
-        const ctx = try page._factory.create(WebGLRenderingContext{});
+        const ctx = try page._factory.create(WebGLRenderingContext{ ._canvas = self });
         return .{ .webgl = ctx };
     }
 
@@ -112,6 +112,58 @@ pub fn toDataURL(self: *const Canvas, mime_type: ?[]const u8, page: *Page) ![]co
     return try std.fmt.allocPrint(page.call_arena, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=={x:0>16}", .{hash});
 }
 
+/// Creates a Blob object representing the image contained in the canvas.
+/// The callback receives the blob when it's ready.
+pub fn toBlob(self: *const Canvas, callback: js.Function, mime_type: ?[]const u8, page: *Page) !void {
+    // Generate the data URL and create a Blob-like response
+    // In a real implementation this would create an actual Blob
+    // For fingerprint testing, we just call the callback with a stub blob
+    const data_url = try self.toDataURL(mime_type, page);
+
+    // Create a minimal Blob object
+    const blob = try page._factory.create(CanvasBlob{
+        ._size = data_url.len,
+        ._type = mime_type orelse "image/png",
+    });
+
+    // Call the callback with the blob
+    _ = try callback.call(void, .{blob});
+}
+
+/// Minimal Blob type for toBlob callback
+pub const CanvasBlob = struct {
+    _size: usize,
+    _type: []const u8,
+
+    pub fn getSize(self: *const CanvasBlob) usize {
+        return self._size;
+    }
+
+    pub fn getType(self: *const CanvasBlob) []const u8 {
+        return self._type;
+    }
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(CanvasBlob);
+
+        pub const Meta = struct {
+            pub const name = "Blob";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+
+        pub const size = bridge.accessor(CanvasBlob.getSize, null, .{});
+        pub const @"type" = bridge.accessor(CanvasBlob.getType, null, .{});
+    };
+};
+
+pub fn registerTypes() []const type {
+    return &.{
+        Canvas,
+        CanvasBlob,
+    };
+}
+
 pub const JsApi = struct {
     pub const bridge = js.Bridge(Canvas);
 
@@ -125,4 +177,5 @@ pub const JsApi = struct {
     pub const height = bridge.accessor(Canvas.getHeight, Canvas.setHeight, .{});
     pub const getContext = bridge.function(Canvas.getContext, .{});
     pub const toDataURL = bridge.function(Canvas.toDataURL, .{});
+    pub const toBlob = bridge.function(Canvas.toBlob, .{});
 };

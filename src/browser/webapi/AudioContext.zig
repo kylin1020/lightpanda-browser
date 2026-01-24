@@ -30,8 +30,11 @@ pub fn registerTypes() []const type {
         OscillatorNode,
         GainNode,
         AnalyserNode,
+        AnalyserNodeContext,
         DynamicsCompressorNode,
         AudioDestinationNode,
+        BiquadFilterNode,
+        AudioParam,
     };
 }
 
@@ -66,11 +69,15 @@ pub const BaseAudioContext = struct {
     }
 
     pub fn createAnalyser(self: *BaseAudioContext) !*AnalyserNode {
-        return self._page._factory.create(AnalyserNode{ ._context = self });
+        return self._page._factory.create(AnalyserNode{ ._context = self, ._sample_rate = self._sample_rate });
     }
 
     pub fn createDynamicsCompressor(self: *BaseAudioContext) !*DynamicsCompressorNode {
         return self._page._factory.create(DynamicsCompressorNode{ ._context = self });
+    }
+
+    pub fn createBiquadFilter(self: *BaseAudioContext) !*BiquadFilterNode {
+        return self._page._factory.create(BiquadFilterNode{ ._context = self });
     }
 
     pub fn getDestination(self: *BaseAudioContext) !*AudioDestinationNode {
@@ -94,6 +101,7 @@ pub const BaseAudioContext = struct {
         pub const createGain = bridge.function(BaseAudioContext.createGain, .{});
         pub const createAnalyser = bridge.function(BaseAudioContext.createAnalyser, .{});
         pub const createDynamicsCompressor = bridge.function(BaseAudioContext.createDynamicsCompressor, .{});
+        pub const createBiquadFilter = bridge.function(BaseAudioContext.createBiquadFilter, .{});
     };
 };
 
@@ -150,11 +158,15 @@ pub const AudioContext = struct {
     }
 
     pub fn createAnalyser(self: *AudioContext) !*AnalyserNode {
-        return self._page._factory.create(AnalyserNode{ ._context = @ptrCast(self) });
+        return self._page._factory.create(AnalyserNode{ ._context = @ptrCast(self), ._sample_rate = self._sample_rate });
     }
 
     pub fn createDynamicsCompressor(self: *AudioContext) !*DynamicsCompressorNode {
         return self._page._factory.create(DynamicsCompressorNode{ ._context = @ptrCast(self) });
+    }
+
+    pub fn createBiquadFilter(self: *AudioContext) !*BiquadFilterNode {
+        return self._page._factory.create(BiquadFilterNode{ ._context = @ptrCast(self) });
     }
 
     pub fn getDestination(self: *AudioContext) !*AudioDestinationNode {
@@ -199,6 +211,7 @@ pub const AudioContext = struct {
         pub const createGain = bridge.function(AudioContext.createGain, .{});
         pub const createAnalyser = bridge.function(AudioContext.createAnalyser, .{});
         pub const createDynamicsCompressor = bridge.function(AudioContext.createDynamicsCompressor, .{});
+        pub const createBiquadFilter = bridge.function(AudioContext.createBiquadFilter, .{});
         pub const @"resume" = bridge.function(AudioContext.resume_, .{});
         pub const @"suspend" = bridge.function(AudioContext.suspend_, .{});
         pub const close = bridge.function(AudioContext.close, .{});
@@ -213,18 +226,14 @@ pub const OfflineAudioContext = struct {
     _number_of_channels: u32,
     _page: *Page,
 
-    const Options = struct {
-        numberOfChannels: ?u32 = null,
-        length: u32,
-        sampleRate: f32,
-    };
-
-    pub fn constructor(options: Options, page: *Page) !*OfflineAudioContext {
+    /// Constructor accepts positional arguments (numberOfChannels, length, sampleRate)
+    /// as commonly used in fingerprinting scripts
+    pub fn constructor(numberOfChannels: u32, length: u32, sampleRate: f32, page: *Page) !*OfflineAudioContext {
         return page._factory.eventTarget(OfflineAudioContext{
             ._proto = undefined,
-            ._sample_rate = options.sampleRate,
-            ._length = options.length,
-            ._number_of_channels = options.numberOfChannels orelse 2,
+            ._sample_rate = sampleRate,
+            ._length = length,
+            ._number_of_channels = numberOfChannels,
             ._page = page,
         });
     }
@@ -258,11 +267,15 @@ pub const OfflineAudioContext = struct {
     }
 
     pub fn createAnalyser(self: *OfflineAudioContext) !*AnalyserNode {
-        return self._page._factory.create(AnalyserNode{ ._context = @ptrCast(self) });
+        return self._page._factory.create(AnalyserNode{ ._context = @ptrCast(self), ._sample_rate = self._sample_rate });
     }
 
     pub fn createDynamicsCompressor(self: *OfflineAudioContext) !*DynamicsCompressorNode {
         return self._page._factory.create(DynamicsCompressorNode{ ._context = @ptrCast(self) });
+    }
+
+    pub fn createBiquadFilter(self: *OfflineAudioContext) !*BiquadFilterNode {
+        return self._page._factory.create(BiquadFilterNode{ ._context = @ptrCast(self) });
     }
 
     pub fn getDestination(self: *OfflineAudioContext) !*AudioDestinationNode {
@@ -308,6 +321,7 @@ pub const OfflineAudioContext = struct {
         pub const createGain = bridge.function(OfflineAudioContext.createGain, .{});
         pub const createAnalyser = bridge.function(OfflineAudioContext.createAnalyser, .{});
         pub const createDynamicsCompressor = bridge.function(OfflineAudioContext.createDynamicsCompressor, .{});
+        pub const createBiquadFilter = bridge.function(OfflineAudioContext.createBiquadFilter, .{});
         pub const startRendering = bridge.function(OfflineAudioContext.startRendering, .{});
     };
 };
@@ -336,15 +350,16 @@ pub const AudioBuffer = struct {
     }
 
     /// Returns channel data as Float32Array. The values are deterministic based on fingerprint seed.
-    pub fn getChannelData(self: *const AudioBuffer, channel: u32, page: *Page) ![]const f32 {
-        if (channel >= self._number_of_channels) {
+    pub fn getChannelData(self: *const AudioBuffer, channel: ?f64, page: *Page) ![]const f32 {
+        const ch: u32 = if (channel) |c| @intFromFloat(c) else 0;
+        if (ch >= self._number_of_channels) {
             return error.IndexSizeError;
         }
 
         // Generate deterministic audio samples based on seed
         var hasher = std.hash.Fnv1a_64.init();
         hasher.update(self._fingerprint_seed);
-        hasher.update(std.mem.asBytes(&channel));
+        hasher.update(std.mem.asBytes(&ch));
         hasher.update(std.mem.asBytes(&self._sample_rate));
         hasher.update(std.mem.asBytes(&self._length));
         const base_hash = hasher.final();
@@ -387,11 +402,44 @@ pub const AudioBuffer = struct {
 /// AudioNode base - stub for various audio nodes
 pub const OscillatorNode = struct {
     _context: *anyopaque,
+    _frequency: ?*AudioParam = null,
+    _detune: ?*AudioParam = null,
+    _type: []const u8 = "sine",
 
-    pub fn connect(_: *OscillatorNode, _: js.Object) void {}
-    pub fn disconnect(_: *OscillatorNode) void {}
+    pub fn connect(_: *OscillatorNode, _: ?js.Object) void {}
+    pub fn disconnect(_: *OscillatorNode, _: ?js.Object) void {}
     pub fn start(_: *OscillatorNode, _: ?f64) void {}
     pub fn stop(_: *OscillatorNode, _: ?f64) void {}
+
+    pub fn getFrequency(self: *OscillatorNode, page: *Page) !*AudioParam {
+        if (self._frequency) |f| return f;
+        self._frequency = try page._factory.create(AudioParam{
+            ._value = 440.0,
+            ._default_value = 440.0,
+            ._min_value = -22050.0,
+            ._max_value = 22050.0,
+        });
+        return self._frequency.?;
+    }
+
+    pub fn getDetune(self: *OscillatorNode, page: *Page) !*AudioParam {
+        if (self._detune) |d| return d;
+        self._detune = try page._factory.create(AudioParam{
+            ._value = 0.0,
+            ._default_value = 0.0,
+            ._min_value = -153600.0,
+            ._max_value = 153600.0,
+        });
+        return self._detune.?;
+    }
+
+    pub fn getType(self: *const OscillatorNode) []const u8 {
+        return self._type;
+    }
+
+    pub fn setType(self: *OscillatorNode, value: []const u8) void {
+        self._type = value;
+    }
 
     pub const JsApi = struct {
         pub const bridge = js.Bridge(OscillatorNode);
@@ -406,14 +454,29 @@ pub const OscillatorNode = struct {
         pub const disconnect = bridge.function(OscillatorNode.disconnect, .{});
         pub const start = bridge.function(OscillatorNode.start, .{});
         pub const stop = bridge.function(OscillatorNode.stop, .{});
+        pub const frequency = bridge.accessor(OscillatorNode.getFrequency, null, .{});
+        pub const detune = bridge.accessor(OscillatorNode.getDetune, null, .{});
+        pub const @"type" = bridge.accessor(OscillatorNode.getType, OscillatorNode.setType, .{});
     };
 };
 
 pub const GainNode = struct {
     _context: *anyopaque,
+    _gain: ?*AudioParam = null,
 
-    pub fn connect(_: *GainNode, _: js.Object) void {}
-    pub fn disconnect(_: *GainNode) void {}
+    pub fn connect(_: *GainNode, _: ?js.Object) void {}
+    pub fn disconnect(_: *GainNode, _: ?js.Object) void {}
+
+    pub fn getGain(self: *GainNode, page: *Page) !*AudioParam {
+        if (self._gain) |g| return g;
+        self._gain = try page._factory.create(AudioParam{
+            ._value = 1.0,
+            ._default_value = 1.0,
+            ._min_value = -3.4028235e+38,
+            ._max_value = 3.4028235e+38,
+        });
+        return self._gain.?;
+    }
 
     pub const JsApi = struct {
         pub const bridge = js.Bridge(GainNode);
@@ -426,14 +489,110 @@ pub const GainNode = struct {
 
         pub const connect = bridge.function(GainNode.connect, .{});
         pub const disconnect = bridge.function(GainNode.disconnect, .{});
+        pub const gain = bridge.accessor(GainNode.getGain, null, .{});
     };
 };
 
 pub const AnalyserNode = struct {
     _context: *anyopaque,
+    _sample_rate: f32 = 44100.0,
+    _fft_size: u32 = 2048,
+    _min_decibels: f64 = -100.0,
+    _max_decibels: f64 = -30.0,
+    _smoothing_time_constant: f64 = 0.8,
 
-    pub fn connect(_: *AnalyserNode, _: js.Object) void {}
-    pub fn disconnect(_: *AnalyserNode) void {}
+    pub fn connect(_: *AnalyserNode, _: ?js.Object) void {}
+    pub fn disconnect(_: *AnalyserNode, _: ?js.Object) void {}
+
+    // Context accessor - returns a simple object with sampleRate
+    pub fn getContext(self: *AnalyserNode, page: *Page) !*AnalyserNodeContext {
+        return page._factory.create(AnalyserNodeContext{ ._sample_rate = self._sample_rate });
+    }
+
+    // AudioNode properties
+    pub fn getNumberOfInputs(_: *const AnalyserNode) u32 {
+        return 1;
+    }
+
+    pub fn getNumberOfOutputs(_: *const AnalyserNode) u32 {
+        return 1;
+    }
+
+    pub fn getChannelCount(_: *const AnalyserNode) u32 {
+        return 2;
+    }
+
+    pub fn getChannelCountMode(_: *const AnalyserNode) []const u8 {
+        return "max";
+    }
+
+    pub fn getChannelInterpretation(_: *const AnalyserNode) []const u8 {
+        return "speakers";
+    }
+
+    // AnalyserNode properties
+    pub fn getFftSize(self: *const AnalyserNode) u32 {
+        return self._fft_size;
+    }
+
+    pub fn setFftSize(self: *AnalyserNode, value: u32) void {
+        // Must be power of 2 between 32 and 32768
+        if (value >= 32 and value <= 32768 and (value & (value - 1)) == 0) {
+            self._fft_size = value;
+        }
+    }
+
+    pub fn getFrequencyBinCount(self: *const AnalyserNode) u32 {
+        return self._fft_size / 2;
+    }
+
+    pub fn getMinDecibels(self: *const AnalyserNode) f64 {
+        return self._min_decibels;
+    }
+
+    pub fn setMinDecibels(self: *AnalyserNode, value: f64) void {
+        self._min_decibels = value;
+    }
+
+    pub fn getMaxDecibels(self: *const AnalyserNode) f64 {
+        return self._max_decibels;
+    }
+
+    pub fn setMaxDecibels(self: *AnalyserNode, value: f64) void {
+        self._max_decibels = value;
+    }
+
+    pub fn getSmoothingTimeConstant(self: *const AnalyserNode) f64 {
+        return self._smoothing_time_constant;
+    }
+
+    pub fn setSmoothingTimeConstant(self: *AnalyserNode, value: f64) void {
+        if (value >= 0.0 and value <= 1.0) {
+            self._smoothing_time_constant = value;
+        }
+    }
+
+    // Data retrieval methods - return deterministic data for fingerprint consistency
+    pub fn getByteFrequencyData(_: *AnalyserNode, array: js.Object) void {
+        // Fill array with silence values (0)
+        // In a real implementation, this would copy frequency data to the Uint8Array
+        _ = array;
+    }
+
+    pub fn getFloatFrequencyData(_: *AnalyserNode, array: js.Object) void {
+        // Fill array with silence values (-Infinity in dB)
+        _ = array;
+    }
+
+    pub fn getByteTimeDomainData(_: *AnalyserNode, array: js.Object) void {
+        // Fill array with 128 (silence for unsigned byte representation)
+        _ = array;
+    }
+
+    pub fn getFloatTimeDomainData(_: *AnalyserNode, array: js.Object) void {
+        // Fill array with 0.0 (silence)
+        _ = array;
+    }
 
     pub const JsApi = struct {
         pub const bridge = js.Bridge(AnalyserNode);
@@ -446,14 +605,100 @@ pub const AnalyserNode = struct {
 
         pub const connect = bridge.function(AnalyserNode.connect, .{});
         pub const disconnect = bridge.function(AnalyserNode.disconnect, .{});
+
+        // AudioNode properties
+        pub const context = bridge.accessor(AnalyserNode.getContext, null, .{});
+        pub const numberOfInputs = bridge.accessor(AnalyserNode.getNumberOfInputs, null, .{});
+        pub const numberOfOutputs = bridge.accessor(AnalyserNode.getNumberOfOutputs, null, .{});
+        pub const channelCount = bridge.accessor(AnalyserNode.getChannelCount, null, .{});
+        pub const channelCountMode = bridge.accessor(AnalyserNode.getChannelCountMode, null, .{});
+        pub const channelInterpretation = bridge.accessor(AnalyserNode.getChannelInterpretation, null, .{});
+
+        // AnalyserNode properties
+        pub const fftSize = bridge.accessor(AnalyserNode.getFftSize, AnalyserNode.setFftSize, .{});
+        pub const frequencyBinCount = bridge.accessor(AnalyserNode.getFrequencyBinCount, null, .{});
+        pub const minDecibels = bridge.accessor(AnalyserNode.getMinDecibels, AnalyserNode.setMinDecibels, .{});
+        pub const maxDecibels = bridge.accessor(AnalyserNode.getMaxDecibels, AnalyserNode.setMaxDecibels, .{});
+        pub const smoothingTimeConstant = bridge.accessor(AnalyserNode.getSmoothingTimeConstant, AnalyserNode.setSmoothingTimeConstant, .{});
+
+        // Data methods
+        pub const getByteFrequencyData = bridge.function(AnalyserNode.getByteFrequencyData, .{});
+        pub const getFloatFrequencyData = bridge.function(AnalyserNode.getFloatFrequencyData, .{});
+        pub const getByteTimeDomainData = bridge.function(AnalyserNode.getByteTimeDomainData, .{});
+        pub const getFloatTimeDomainData = bridge.function(AnalyserNode.getFloatTimeDomainData, .{});
     };
 };
 
 pub const DynamicsCompressorNode = struct {
     _context: *anyopaque,
+    _threshold: ?*AudioParam = null,
+    _knee: ?*AudioParam = null,
+    _ratio: ?*AudioParam = null,
+    _attack: ?*AudioParam = null,
+    _release: ?*AudioParam = null,
+    _reduction: f64 = 0.0,
 
-    pub fn connect(_: *DynamicsCompressorNode, _: js.Object) void {}
-    pub fn disconnect(_: *DynamicsCompressorNode) void {}
+    pub fn connect(_: *DynamicsCompressorNode, _: ?js.Object) void {}
+    pub fn disconnect(_: *DynamicsCompressorNode, _: ?js.Object) void {}
+
+    pub fn getThreshold(self: *DynamicsCompressorNode, page: *Page) !*AudioParam {
+        if (self._threshold) |t| return t;
+        self._threshold = try page._factory.create(AudioParam{
+            ._value = -24.0,
+            ._default_value = -24.0,
+            ._min_value = -100.0,
+            ._max_value = 0.0,
+        });
+        return self._threshold.?;
+    }
+
+    pub fn getKnee(self: *DynamicsCompressorNode, page: *Page) !*AudioParam {
+        if (self._knee) |k| return k;
+        self._knee = try page._factory.create(AudioParam{
+            ._value = 30.0,
+            ._default_value = 30.0,
+            ._min_value = 0.0,
+            ._max_value = 40.0,
+        });
+        return self._knee.?;
+    }
+
+    pub fn getRatio(self: *DynamicsCompressorNode, page: *Page) !*AudioParam {
+        if (self._ratio) |r| return r;
+        self._ratio = try page._factory.create(AudioParam{
+            ._value = 12.0,
+            ._default_value = 12.0,
+            ._min_value = 1.0,
+            ._max_value = 20.0,
+        });
+        return self._ratio.?;
+    }
+
+    pub fn getAttack(self: *DynamicsCompressorNode, page: *Page) !*AudioParam {
+        if (self._attack) |a| return a;
+        self._attack = try page._factory.create(AudioParam{
+            ._value = 0.003,
+            ._default_value = 0.003,
+            ._min_value = 0.0,
+            ._max_value = 1.0,
+        });
+        return self._attack.?;
+    }
+
+    pub fn getRelease(self: *DynamicsCompressorNode, page: *Page) !*AudioParam {
+        if (self._release) |r| return r;
+        self._release = try page._factory.create(AudioParam{
+            ._value = 0.25,
+            ._default_value = 0.25,
+            ._min_value = 0.0,
+            ._max_value = 1.0,
+        });
+        return self._release.?;
+    }
+
+    pub fn getReduction(self: *const DynamicsCompressorNode) f64 {
+        return self._reduction;
+    }
 
     pub const JsApi = struct {
         pub const bridge = js.Bridge(DynamicsCompressorNode);
@@ -466,6 +711,12 @@ pub const DynamicsCompressorNode = struct {
 
         pub const connect = bridge.function(DynamicsCompressorNode.connect, .{});
         pub const disconnect = bridge.function(DynamicsCompressorNode.disconnect, .{});
+        pub const threshold = bridge.accessor(DynamicsCompressorNode.getThreshold, null, .{});
+        pub const knee = bridge.accessor(DynamicsCompressorNode.getKnee, null, .{});
+        pub const ratio = bridge.accessor(DynamicsCompressorNode.getRatio, null, .{});
+        pub const attack = bridge.accessor(DynamicsCompressorNode.getAttack, null, .{});
+        pub const release = bridge.accessor(DynamicsCompressorNode.getRelease, null, .{});
+        pub const reduction = bridge.accessor(DynamicsCompressorNode.getReduction, null, .{});
     };
 };
 
@@ -486,5 +737,198 @@ pub const AudioDestinationNode = struct {
         };
 
         pub const maxChannelCount = bridge.accessor(AudioDestinationNode.getMaxChannelCount, null, .{});
+    };
+};
+
+pub const BiquadFilterNode = struct {
+    _context: *anyopaque,
+    _type: []const u8 = "lowpass",
+    _frequency: *AudioParam = undefined,
+    _detune: *AudioParam = undefined,
+    _q: *AudioParam = undefined,
+    _gain: *AudioParam = undefined,
+    _page: *Page = undefined,
+    _initialized: bool = false,
+
+    pub fn initParams(self: *BiquadFilterNode, page: *Page) !void {
+        if (self._initialized) return;
+        self._page = page;
+        self._frequency = try page._factory.create(AudioParam{
+            ._value = 350.0,
+            ._default_value = 350.0,
+            ._min_value = 0.0,
+            ._max_value = 24000.0,
+        });
+        self._detune = try page._factory.create(AudioParam{
+            ._value = 0.0,
+            ._default_value = 0.0,
+            ._min_value = -153600.0,
+            ._max_value = 153600.0,
+        });
+        self._q = try page._factory.create(AudioParam{
+            ._value = 1.0,
+            ._default_value = 1.0,
+            ._min_value = -3.4028235e+38,
+            ._max_value = 3.4028235e+38,
+        });
+        self._gain = try page._factory.create(AudioParam{
+            ._value = 0.0,
+            ._default_value = 0.0,
+            ._min_value = -3.4028235e+38,
+            ._max_value = 1541.0,
+        });
+        self._initialized = true;
+    }
+
+    pub fn connect(_: *BiquadFilterNode, _: ?js.Object) void {}
+    pub fn disconnect(_: *BiquadFilterNode, _: ?js.Object) void {}
+
+    pub fn getType(self: *const BiquadFilterNode) []const u8 {
+        return self._type;
+    }
+
+    pub fn setType(self: *BiquadFilterNode, value: []const u8) void {
+        self._type = value;
+    }
+
+    pub fn getFrequency(self: *BiquadFilterNode, page: *Page) !*AudioParam {
+        try self.initParams(page);
+        return self._frequency;
+    }
+
+    pub fn getDetune(self: *BiquadFilterNode, page: *Page) !*AudioParam {
+        try self.initParams(page);
+        return self._detune;
+    }
+
+    pub fn getQ(self: *BiquadFilterNode, page: *Page) !*AudioParam {
+        try self.initParams(page);
+        return self._q;
+    }
+
+    pub fn getGain(self: *BiquadFilterNode, page: *Page) !*AudioParam {
+        try self.initParams(page);
+        return self._gain;
+    }
+
+    /// Returns frequency response at specified frequencies
+    pub fn getFrequencyResponse(_: *BiquadFilterNode, _: js.Object, _: js.Object, _: js.Object) void {}
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(BiquadFilterNode);
+
+        pub const Meta = struct {
+            pub const name = "BiquadFilterNode";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+
+        pub const connect = bridge.function(BiquadFilterNode.connect, .{});
+        pub const disconnect = bridge.function(BiquadFilterNode.disconnect, .{});
+        pub const @"type" = bridge.accessor(BiquadFilterNode.getType, BiquadFilterNode.setType, .{});
+        pub const frequency = bridge.accessor(BiquadFilterNode.getFrequency, null, .{});
+        pub const detune = bridge.accessor(BiquadFilterNode.getDetune, null, .{});
+        pub const Q = bridge.accessor(BiquadFilterNode.getQ, null, .{});
+        pub const gain = bridge.accessor(BiquadFilterNode.getGain, null, .{});
+        pub const getFrequencyResponse = bridge.function(BiquadFilterNode.getFrequencyResponse, .{});
+    };
+};
+
+/// AudioParam represents an audio-related parameter
+pub const AudioParam = struct {
+    _value: f64,
+    _default_value: f64,
+    _min_value: f64,
+    _max_value: f64,
+
+    pub fn getValue(self: *const AudioParam) f64 {
+        return self._value;
+    }
+
+    pub fn setValue(self: *AudioParam, value: f64) void {
+        self._value = value;
+    }
+
+    pub fn getDefaultValue(self: *const AudioParam) f64 {
+        return self._default_value;
+    }
+
+    pub fn getMinValue(self: *const AudioParam) f64 {
+        return self._min_value;
+    }
+
+    pub fn getMaxValue(self: *const AudioParam) f64 {
+        return self._max_value;
+    }
+
+    pub fn setValueAtTime(self: *AudioParam, _: f64, _: f64) *AudioParam {
+        return self;
+    }
+
+    pub fn linearRampToValueAtTime(self: *AudioParam, _: f64, _: f64) *AudioParam {
+        return self;
+    }
+
+    pub fn exponentialRampToValueAtTime(self: *AudioParam, _: f64, _: f64) *AudioParam {
+        return self;
+    }
+
+    pub fn setTargetAtTime(self: *AudioParam, _: f64, _: f64, _: f64) *AudioParam {
+        return self;
+    }
+
+    pub fn cancelScheduledValues(self: *AudioParam, _: f64) *AudioParam {
+        return self;
+    }
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(AudioParam);
+
+        pub const Meta = struct {
+            pub const name = "AudioParam";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+
+        pub const value = bridge.accessor(AudioParam.getValue, AudioParam.setValue, .{});
+        pub const defaultValue = bridge.accessor(AudioParam.getDefaultValue, null, .{});
+        pub const minValue = bridge.accessor(AudioParam.getMinValue, null, .{});
+        pub const maxValue = bridge.accessor(AudioParam.getMaxValue, null, .{});
+        pub const setValueAtTime = bridge.function(AudioParam.setValueAtTime, .{});
+        pub const linearRampToValueAtTime = bridge.function(AudioParam.linearRampToValueAtTime, .{});
+        pub const exponentialRampToValueAtTime = bridge.function(AudioParam.exponentialRampToValueAtTime, .{});
+        pub const setTargetAtTime = bridge.function(AudioParam.setTargetAtTime, .{});
+        pub const cancelScheduledValues = bridge.function(AudioParam.cancelScheduledValues, .{});
+    };
+};
+
+/// Simple context object returned by AnalyserNode.context for fingerprinting compatibility
+pub const AnalyserNodeContext = struct {
+    _sample_rate: f32,
+
+    pub fn getSampleRate(self: *const AnalyserNodeContext) f32 {
+        return self._sample_rate;
+    }
+
+    pub fn getCurrentTime(_: *const AnalyserNodeContext) f64 {
+        return 0.0;
+    }
+
+    pub fn getState(_: *const AnalyserNodeContext) []const u8 {
+        return "running";
+    }
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(AnalyserNodeContext);
+
+        pub const Meta = struct {
+            pub const name = "AudioContext";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+
+        pub const sampleRate = bridge.accessor(AnalyserNodeContext.getSampleRate, null, .{});
+        pub const currentTime = bridge.accessor(AnalyserNodeContext.getCurrentTime, null, .{});
+        pub const state = bridge.accessor(AnalyserNodeContext.getState, null, .{});
     };
 };

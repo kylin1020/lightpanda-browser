@@ -22,6 +22,7 @@ const Page = @import("../Page.zig");
 const App = @import("../../App.zig");
 const Permissions = @import("Permissions.zig");
 const BatteryManager = @import("BatteryManager.zig");
+const PluginArray = @import("PluginArray.zig");
 const log = @import("../../log.zig");
 
 const Navigator = @This();
@@ -127,14 +128,19 @@ pub fn getWebdriver(_: *const Navigator) bool {
     return false;
 }
 
-pub fn getUserAgentData(_: *const Navigator, page: *Page) App.FingerprintProfile.UserAgentData {
+pub fn getUserAgentData(_: *const Navigator, page: *Page) !*NavigatorUAData {
     if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.userAgentData", .{});
-    return page.fingerprintProfile().userAgentData;
+    return page._factory.create(NavigatorUAData{ ._page = page });
 }
 
-pub fn getPlugins(_: *const Navigator) []const []const u8 {
-    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.plugins EMPTY", .{});
-    return &.{};
+pub fn getPlugins(_: *const Navigator, page: *Page) !*PluginArray.PluginArray {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.plugins", .{});
+    return page._factory.create(PluginArray.PluginArray{});
+}
+
+pub fn getMimeTypes(_: *const Navigator, page: *Page) !*PluginArray.MimeTypeArray {
+    if (FINGERPRINT_DEBUG) log.debug(.browser, "FP nav.mimeTypes", .{});
+    return page._factory.create(PluginArray.MimeTypeArray{});
 }
 
 pub fn getDeviceMemory(_: *const Navigator, page: *Page) u32 {
@@ -232,6 +238,7 @@ pub fn registerTypes() []const type {
     return &.{
         Navigator,
         NetworkInformation,
+        NavigatorUAData,
     };
 }
 
@@ -276,6 +283,85 @@ pub const NetworkInformation = struct {
     };
 };
 
+/// NavigatorUAData - provides user agent data with getHighEntropyValues
+pub const NavigatorUAData = struct {
+    _page: *Page,
+
+    pub fn getBrands(self: *const NavigatorUAData) []const App.FingerprintProfile.UserAgentData.Brand {
+        return self._page.fingerprintProfile().userAgentData.brands;
+    }
+
+    pub fn getMobile(self: *const NavigatorUAData) bool {
+        return self._page.fingerprintProfile().userAgentData.mobile;
+    }
+
+    pub fn getPlatform(self: *const NavigatorUAData) []const u8 {
+        return self._page.fingerprintProfile().userAgentData.platform;
+    }
+
+    /// Returns a Promise that resolves with high-entropy values
+    pub fn getHighEntropyValues(self: *const NavigatorUAData, _: ?[]const []const u8) !js.Promise {
+        const profile = self._page.fingerprintProfile().userAgentData;
+        const resolver = self._page.js.createPromiseResolver();
+
+        // Return the high entropy data as a JS object
+        // The actual object construction will be handled by the bridge
+        const result = HighEntropyValues{
+            .brands = profile.brands,
+            .fullVersionList = profile.fullVersionList,
+            .platform = profile.platform,
+            .platformVersion = profile.platformVersion,
+            .architecture = profile.architecture,
+            .model = profile.model,
+            .mobile = profile.mobile,
+        };
+
+        resolver.resolve("NavigatorUAData.getHighEntropyValues", result);
+        return resolver.promise();
+    }
+
+    pub fn toJSON(self: *const NavigatorUAData) ToJSONResult {
+        const profile = self._page.fingerprintProfile().userAgentData;
+        return ToJSONResult{
+            .brands = profile.brands,
+            .mobile = profile.mobile,
+            .platform = profile.platform,
+        };
+    }
+
+    pub const HighEntropyValues = struct {
+        brands: []const App.FingerprintProfile.UserAgentData.Brand,
+        fullVersionList: []const App.FingerprintProfile.UserAgentData.Brand,
+        platform: []const u8,
+        platformVersion: []const u8,
+        architecture: []const u8,
+        model: []const u8,
+        mobile: bool,
+    };
+
+    pub const ToJSONResult = struct {
+        brands: []const App.FingerprintProfile.UserAgentData.Brand,
+        mobile: bool,
+        platform: []const u8,
+    };
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(NavigatorUAData);
+
+        pub const Meta = struct {
+            pub const name = "NavigatorUAData";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+
+        pub const brands = bridge.accessor(NavigatorUAData.getBrands, null, .{});
+        pub const mobile = bridge.accessor(NavigatorUAData.getMobile, null, .{});
+        pub const platform = bridge.accessor(NavigatorUAData.getPlatform, null, .{});
+        pub const getHighEntropyValues = bridge.function(NavigatorUAData.getHighEntropyValues, .{});
+        pub const toJSON = bridge.function(NavigatorUAData.toJSON, .{});
+    };
+};
+
 pub const JsApi = struct {
     pub const bridge = js.Bridge(Navigator);
 
@@ -304,6 +390,7 @@ pub const JsApi = struct {
     pub const webdriver = bridge.accessor(Navigator.getWebdriver, null, .{});
     pub const userAgentData = bridge.accessor(Navigator.getUserAgentData, null, .{});
     pub const plugins = bridge.accessor(Navigator.getPlugins, null, .{});
+    pub const mimeTypes = bridge.accessor(Navigator.getMimeTypes, null, .{});
     pub const connection = bridge.accessor(Navigator.getConnection, null, .{});
     pub const permissions = bridge.accessor(Navigator.getPermissions, null, .{});
     pub const registerProtocolHandler = bridge.function(Navigator.registerProtocolHandler, .{ .dom_exception = true });

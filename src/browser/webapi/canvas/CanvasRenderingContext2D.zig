@@ -22,14 +22,25 @@ const js = @import("../../js/js.zig");
 
 const color = @import("../../color.zig");
 const Page = @import("../../Page.zig");
+const TextMetrics = @import("TextMetrics.zig");
+const ImageData = @import("ImageData.zig");
+const HtmlCanvasElement = @import("../element/html/Canvas.zig");
+const OffscreenCanvas = @import("../OffscreenCanvas.zig");
 
 /// This class doesn't implement a `constructor`.
 /// It can be obtained with a call to `HTMLCanvasElement#getContext`.
 /// https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D
 const CanvasRenderingContext2D = @This();
+/// Reference to the parent canvas element.
+_canvas: *HtmlCanvasElement = undefined,
 /// Fill color.
 /// TODO: Add support for `CanvasGradient` and `CanvasPattern`.
 _fill_style: color.RGBA = color.RGBA.Named.black,
+
+/// Returns the canvas element that created this context.
+pub fn getCanvas(self: *const CanvasRenderingContext2D) *HtmlCanvasElement {
+    return self._canvas;
+}
 
 pub fn getFillStyle(self: *const CanvasRenderingContext2D, page: *Page) ![]const u8 {
     var w = std.Io.Writer.Allocating.init(page.call_arena);
@@ -93,6 +104,12 @@ pub fn translate(_: *CanvasRenderingContext2D, _: f64, _: f64) void {}
 pub fn transform(_: *CanvasRenderingContext2D, _: f64, _: f64, _: f64, _: f64, _: f64, _: f64) void {}
 pub fn setTransform(_: *CanvasRenderingContext2D, _: f64, _: f64, _: f64, _: f64, _: f64, _: f64) void {}
 pub fn resetTransform(_: *CanvasRenderingContext2D) void {}
+
+/// Returns the current transformation matrix
+pub fn getTransform(_: *CanvasRenderingContext2D, page: *Page) !*OffscreenCanvas.DOMMatrix {
+    return page._factory.create(OffscreenCanvas.DOMMatrix{});
+}
+
 pub fn setGlobalAlpha(_: *CanvasRenderingContext2D, _: f64) void {}
 pub fn setGlobalCompositeOperation(_: *CanvasRenderingContext2D, _: []const u8) void {}
 pub fn setStrokeStyle(_: *CanvasRenderingContext2D, _: []const u8) void {}
@@ -121,6 +138,206 @@ pub fn setTextBaseline(_: *CanvasRenderingContext2D, _: []const u8) void {}
 pub fn fillText(_: *CanvasRenderingContext2D, _: []const u8, _: f64, _: f64, _: ?f64) void {}
 pub fn strokeText(_: *CanvasRenderingContext2D, _: []const u8, _: f64, _: f64, _: ?f64) void {}
 
+/// Measures text width and other metrics
+pub fn measureText(_: *CanvasRenderingContext2D, text: []const u8, page: *Page) !*TextMetrics {
+    // Parse font size from current font (default "10px sans-serif")
+    const font_size: f64 = 10.0; // TODO: parse from _font field
+    const metrics = TextMetrics.init(text, font_size);
+    return page._factory.create(metrics);
+}
+
+/// Creates a new ImageData object with the specified dimensions
+pub fn createImageData(_: *CanvasRenderingContext2D, width: u32, height: u32, page: *Page) !*ImageData {
+    return page._factory.create(ImageData{
+        ._width = width,
+        ._height = height,
+        ._color_space = "srgb",
+    });
+}
+
+/// Returns an ImageData object representing pixel data for a specified rectangle
+pub fn getImageData(_: *CanvasRenderingContext2D, _: f64, _: f64, width: f64, height: f64, page: *Page) !*ImageData {
+    const w: u32 = @intFromFloat(@max(0, width));
+    const h: u32 = @intFromFloat(@max(0, height));
+    return page._factory.create(ImageData{
+        ._width = w,
+        ._height = h,
+        ._color_space = "srgb",
+    });
+}
+
+/// Paints data from the given ImageData object onto the canvas
+pub fn putImageData(_: *CanvasRenderingContext2D, _: *ImageData, _: f64, _: f64) void {}
+
+/// Returns whether the specified point is inside the current path
+pub fn isPointInPath(_: *CanvasRenderingContext2D, _: f64, _: f64, _: ?[]const u8) bool {
+    return false;
+}
+
+/// Returns whether the specified point is inside the stroked area of a path
+pub fn isPointInStroke(_: *CanvasRenderingContext2D, _: f64, _: f64) bool {
+    return false;
+}
+
+/// Draws an ellipse
+pub fn ellipse(_: *CanvasRenderingContext2D, _: f64, _: f64, _: f64, _: f64, _: f64, _: f64, _: f64, _: ?bool) void {}
+
+/// Draws a rounded rectangle
+pub fn roundRect(_: *CanvasRenderingContext2D, _: f64, _: f64, _: f64, _: f64, _: ?f64) void {}
+
+/// Draws an image onto the canvas
+pub fn drawImage(_: *CanvasRenderingContext2D, _: js.Object, _: f64, _: f64) void {}
+
+/// Returns the current line dash pattern
+pub fn getLineDash(_: *CanvasRenderingContext2D) []const f64 {
+    return &.{};
+}
+
+/// Sets the line dash pattern
+pub fn setLineDash(_: *CanvasRenderingContext2D, _: []const f64) void {}
+
+/// Gets the line dash offset
+pub fn getLineDashOffset(_: *const CanvasRenderingContext2D) f64 {
+    return 0.0;
+}
+
+/// Sets the line dash offset
+pub fn setLineDashOffset(_: *CanvasRenderingContext2D, _: f64) void {}
+
+/// Creates a linear gradient
+pub fn createLinearGradient(_: *CanvasRenderingContext2D, _: f64, _: f64, _: f64, _: f64, page: *Page) !*CanvasGradient {
+    return page._factory.create(CanvasGradient{});
+}
+
+/// Creates a radial gradient
+pub fn createRadialGradient(_: *CanvasRenderingContext2D, _: f64, _: f64, _: f64, _: f64, _: f64, _: f64, page: *Page) !*CanvasGradient {
+    return page._factory.create(CanvasGradient{});
+}
+
+/// Creates a conic gradient
+pub fn createConicGradient(_: *CanvasRenderingContext2D, _: f64, _: f64, _: f64, page: *Page) !*CanvasGradient {
+    return page._factory.create(CanvasGradient{});
+}
+
+/// Creates a pattern from an image
+pub fn createPattern(_: *CanvasRenderingContext2D, _: js.Object, _: ?[]const u8, page: *Page) !*CanvasPattern {
+    return page._factory.create(CanvasPattern{});
+}
+
+/// Returns context attributes
+pub fn getContextAttributes(_: *CanvasRenderingContext2D) ContextAttributes {
+    return ContextAttributes{};
+}
+
+/// Gets the shadow blur value
+pub fn getShadowBlur(_: *const CanvasRenderingContext2D) f64 {
+    return 0.0;
+}
+
+/// Sets the shadow blur value
+pub fn setShadowBlur(_: *CanvasRenderingContext2D, _: f64) void {}
+
+/// Gets the shadow color
+pub fn getShadowColor(_: *const CanvasRenderingContext2D) []const u8 {
+    return "rgba(0, 0, 0, 0)";
+}
+
+/// Sets the shadow color
+pub fn setShadowColor(_: *CanvasRenderingContext2D, _: []const u8) void {}
+
+/// Gets the shadow offset X
+pub fn getShadowOffsetX(_: *const CanvasRenderingContext2D) f64 {
+    return 0.0;
+}
+
+/// Sets the shadow offset X
+pub fn setShadowOffsetX(_: *CanvasRenderingContext2D, _: f64) void {}
+
+/// Gets the shadow offset Y
+pub fn getShadowOffsetY(_: *const CanvasRenderingContext2D) f64 {
+    return 0.0;
+}
+
+/// Sets the shadow offset Y
+pub fn setShadowOffsetY(_: *CanvasRenderingContext2D, _: f64) void {}
+
+/// Gets the image smoothing enabled state
+pub fn getImageSmoothingEnabled(_: *const CanvasRenderingContext2D) bool {
+    return true;
+}
+
+/// Sets the image smoothing enabled state
+pub fn setImageSmoothingEnabled(_: *CanvasRenderingContext2D, _: bool) void {}
+
+/// Gets the image smoothing quality
+pub fn getImageSmoothingQuality(_: *const CanvasRenderingContext2D) []const u8 {
+    return "low";
+}
+
+/// Sets the image smoothing quality
+pub fn setImageSmoothingQuality(_: *CanvasRenderingContext2D, _: []const u8) void {}
+
+/// CanvasGradient stub for fingerprint compatibility
+pub const CanvasGradient = struct {
+    pub fn addColorStop(_: *CanvasGradient, _: f64, _: []const u8) void {}
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(CanvasGradient);
+
+        pub const Meta = struct {
+            pub const name = "CanvasGradient";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+
+        pub const addColorStop = bridge.function(CanvasGradient.addColorStop, .{});
+    };
+};
+
+/// CanvasPattern stub for fingerprint compatibility
+pub const CanvasPattern = struct {
+    pub fn setTransform(_: *CanvasPattern, _: ?js.Object) void {}
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(CanvasPattern);
+
+        pub const Meta = struct {
+            pub const name = "CanvasPattern";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+
+        pub const setTransform = bridge.function(CanvasPattern.setTransform, .{});
+    };
+};
+
+/// Context attributes returned by getContextAttributes
+pub const ContextAttributes = struct {
+    alpha: bool = true,
+    colorSpace: []const u8 = "srgb",
+    desynchronized: bool = false,
+    willReadFrequently: bool = false,
+
+    pub const JsApi = struct {
+        pub const bridge = js.Bridge(ContextAttributes);
+
+        pub const Meta = struct {
+            pub const name = "CanvasRenderingContext2DSettings";
+            pub const prototype_chain = bridge.prototypeChain();
+            pub var class_id: bridge.ClassId = undefined;
+        };
+    };
+};
+
+pub fn registerTypes() []const type {
+    return &.{
+        CanvasRenderingContext2D,
+        CanvasGradient,
+        CanvasPattern,
+        ContextAttributes,
+    };
+}
+
 pub const JsApi = struct {
     pub const bridge = js.Bridge(CanvasRenderingContext2D);
 
@@ -131,6 +348,8 @@ pub const JsApi = struct {
         pub var class_id: bridge.ClassId = undefined;
     };
 
+    pub const canvas = bridge.accessor(CanvasRenderingContext2D.getCanvas, null, .{});
+
     pub const save = bridge.function(CanvasRenderingContext2D.save, .{});
     pub const restore = bridge.function(CanvasRenderingContext2D.restore, .{});
 
@@ -140,6 +359,7 @@ pub const JsApi = struct {
     pub const transform = bridge.function(CanvasRenderingContext2D.transform, .{});
     pub const setTransform = bridge.function(CanvasRenderingContext2D.setTransform, .{});
     pub const resetTransform = bridge.function(CanvasRenderingContext2D.resetTransform, .{});
+    pub const getTransform = bridge.function(CanvasRenderingContext2D.getTransform, .{});
 
     pub const globalAlpha = bridge.accessor(CanvasRenderingContext2D.getGlobalAlpha, CanvasRenderingContext2D.setGlobalAlpha, .{});
     pub const globalCompositeOperation = bridge.accessor(CanvasRenderingContext2D.getGlobalCompositeOperation, CanvasRenderingContext2D.setGlobalCompositeOperation, .{});
@@ -175,6 +395,47 @@ pub const JsApi = struct {
     pub const textBaseline = bridge.accessor(CanvasRenderingContext2D.getTextBaseline, CanvasRenderingContext2D.setTextBaseline, .{});
     pub const fillText = bridge.function(CanvasRenderingContext2D.fillText, .{});
     pub const strokeText = bridge.function(CanvasRenderingContext2D.strokeText, .{});
+
+    // Text measurement
+    pub const measureText = bridge.function(CanvasRenderingContext2D.measureText, .{});
+
+    // Image data
+    pub const createImageData = bridge.function(CanvasRenderingContext2D.createImageData, .{});
+    pub const getImageData = bridge.function(CanvasRenderingContext2D.getImageData, .{});
+    pub const putImageData = bridge.function(CanvasRenderingContext2D.putImageData, .{});
+
+    // Path detection
+    pub const isPointInPath = bridge.function(CanvasRenderingContext2D.isPointInPath, .{});
+    pub const isPointInStroke = bridge.function(CanvasRenderingContext2D.isPointInStroke, .{});
+
+    // Additional shapes
+    pub const ellipse = bridge.function(CanvasRenderingContext2D.ellipse, .{});
+    pub const roundRect = bridge.function(CanvasRenderingContext2D.roundRect, .{});
+    pub const drawImage = bridge.function(CanvasRenderingContext2D.drawImage, .{});
+
+    // Line dash
+    pub const getLineDash = bridge.function(CanvasRenderingContext2D.getLineDash, .{});
+    pub const setLineDash = bridge.function(CanvasRenderingContext2D.setLineDash, .{});
+    pub const lineDashOffset = bridge.accessor(CanvasRenderingContext2D.getLineDashOffset, CanvasRenderingContext2D.setLineDashOffset, .{});
+
+    // Gradients and patterns
+    pub const createLinearGradient = bridge.function(CanvasRenderingContext2D.createLinearGradient, .{});
+    pub const createRadialGradient = bridge.function(CanvasRenderingContext2D.createRadialGradient, .{});
+    pub const createConicGradient = bridge.function(CanvasRenderingContext2D.createConicGradient, .{});
+    pub const createPattern = bridge.function(CanvasRenderingContext2D.createPattern, .{});
+
+    // Context attributes
+    pub const getContextAttributes = bridge.function(CanvasRenderingContext2D.getContextAttributes, .{});
+
+    // Shadow properties
+    pub const shadowBlur = bridge.accessor(CanvasRenderingContext2D.getShadowBlur, CanvasRenderingContext2D.setShadowBlur, .{});
+    pub const shadowColor = bridge.accessor(CanvasRenderingContext2D.getShadowColor, CanvasRenderingContext2D.setShadowColor, .{});
+    pub const shadowOffsetX = bridge.accessor(CanvasRenderingContext2D.getShadowOffsetX, CanvasRenderingContext2D.setShadowOffsetX, .{});
+    pub const shadowOffsetY = bridge.accessor(CanvasRenderingContext2D.getShadowOffsetY, CanvasRenderingContext2D.setShadowOffsetY, .{});
+
+    // Image smoothing
+    pub const imageSmoothingEnabled = bridge.accessor(CanvasRenderingContext2D.getImageSmoothingEnabled, CanvasRenderingContext2D.setImageSmoothingEnabled, .{});
+    pub const imageSmoothingQuality = bridge.accessor(CanvasRenderingContext2D.getImageSmoothingQuality, CanvasRenderingContext2D.setImageSmoothingQuality, .{});
 };
 
 const testing = @import("../../../testing.zig");
