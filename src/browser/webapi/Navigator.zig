@@ -21,10 +21,12 @@ const builtin = @import("builtin");
 const js = @import("../js/js.zig");
 const Page = @import("../Page.zig");
 const PluginArray = @import("PluginArray.zig");
+const MimeTypeArray = PluginArray.MimeTypeArray;
 
 const Navigator = @This();
 _pad: bool = false,
 _plugins: PluginArray = .{},
+_mime_types: MimeTypeArray = .{},
 
 pub const init: Navigator = .{};
 
@@ -32,8 +34,8 @@ pub fn getUserAgent(_: *const Navigator, page: *Page) []const u8 {
     return page._session.browser.app.config.http_headers.user_agent;
 }
 
-pub fn getLanguages(_: *const Navigator) [1][]const u8 {
-    return .{"en-US"};
+pub fn getLanguages(_: *const Navigator) [2][]const u8 {
+    return .{ "en-US", "en" };
 }
 
 pub fn getPlatform(_: *const Navigator) []const u8 {
@@ -53,6 +55,10 @@ pub fn javaEnabled(_: *const Navigator) bool {
 
 pub fn getPlugins(self: *Navigator) *PluginArray {
     return &self._plugins;
+}
+
+pub fn getMimeTypes(self: *Navigator) *MimeTypeArray {
+    return &self._mime_types;
 }
 
 pub fn registerProtocolHandler(_: *const Navigator, scheme: []const u8, url: [:0]const u8, page: *const Page) !void {
@@ -136,7 +142,7 @@ pub const JsApi = struct {
     // Read-only properties
     pub const userAgent = bridge.accessor(Navigator.getUserAgent, null, .{});
     pub const appName = bridge.property("Netscape", .{ .template = false });
-    pub const appCodeName = bridge.property("Netscape", .{ .template = false });
+    pub const appCodeName = bridge.property("Mozilla", .{ .template = false });
     pub const appVersion = bridge.property("1.0", .{ .template = false });
     pub const platform = bridge.accessor(Navigator.getPlatform, null, .{});
     pub const language = bridge.property("en-US", .{ .template = false });
@@ -149,6 +155,8 @@ pub const JsApi = struct {
     pub const product = bridge.property("Gecko", .{ .template = false });
     pub const webdriver = bridge.property(false, .{ .template = false });
     pub const plugins = bridge.accessor(Navigator.getPlugins, null, .{});
+    pub const mimeTypes = bridge.accessor(Navigator.getMimeTypes, null, .{});
+    pub const pdfViewerEnabled = bridge.property(true, .{ .template = false });
     pub const doNotTrack = bridge.property(null, .{ .template = false });
     pub const globalPrivacyControl = bridge.property(true, .{ .template = false });
     pub const registerProtocolHandler = bridge.function(Navigator.registerProtocolHandler, .{ .dom_exception = true });

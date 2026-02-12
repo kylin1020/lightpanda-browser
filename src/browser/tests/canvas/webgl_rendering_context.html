@@ -70,8 +70,8 @@
   testing.expectEqual(UNMASKED_VENDOR_WEBGL, 0x9245);
   testing.expectEqual(UNMASKED_RENDERER_WEBGL, 0x9246);
 
-  testing.expectEqual("", ctx.getParameter(UNMASKED_VENDOR_WEBGL));
-  testing.expectEqual("", ctx.getParameter(UNMASKED_RENDERER_WEBGL));
+  testing.expectEqual("Intel Inc.", ctx.getParameter(UNMASKED_VENDOR_WEBGL));
+  testing.expectEqual("Intel Iris OpenGL Engine", ctx.getParameter(UNMASKED_RENDERER_WEBGL));
 }
 
 // WEBGL_lose_context

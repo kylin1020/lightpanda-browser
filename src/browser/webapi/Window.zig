@@ -23,6 +23,7 @@ const builtin = @import("builtin");
 const log = @import("../../log.zig");
 const Page = @import("../Page.zig");
 const Console = @import("Console.zig");
+const Chrome = @import("Chrome.zig");
 const History = @import("History.zig");
 const Navigation = @import("navigation/Navigation.zig");
 const Crypto = @import("Crypto.zig");
@@ -56,6 +57,7 @@ _document: *Document,
 _css: CSS = .init,
 _crypto: Crypto = .init,
 _console: Console = .init,
+_chrome: Chrome = .init,
 _navigator: Navigator = .init,
 _screen: *Screen,
 _visual_viewport: *VisualViewport,
@@ -106,6 +108,10 @@ pub fn getConsole(self: *Window) *Console {
 
 pub fn getNavigator(self: *Window) *Navigator {
     return &self._navigator;
+}
+
+pub fn getChrome(self: *Window) *Chrome {
+    return &self._chrome;
 }
 
 pub fn getScreen(self: *Window) *Screen {
@@ -718,6 +724,7 @@ pub const JsApi = struct {
     pub const window = bridge.accessor(Window.getWindow, null, .{});
     pub const parent = bridge.accessor(Window.getWindow, null, .{});
     pub const console = bridge.accessor(Window.getConsole, null, .{});
+    pub const chrome = bridge.accessor(Window.getChrome, null, .{});
     pub const navigator = bridge.accessor(Window.getNavigator, null, .{});
     pub const screen = bridge.accessor(Window.getScreen, null, .{});
     pub const visualViewport = bridge.accessor(Window.getVisualViewport, null, .{});

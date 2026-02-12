@@ -171,8 +171,15 @@ pub const Extension = union(enum) {
 /// Return value also depends on what's being passed as `pname`; we don't really
 /// support any though.
 pub fn getParameter(_: *const WebGLRenderingContext, pname: u32) []const u8 {
-    _ = pname;
-    return "";
+    return switch (pname) {
+        0x1F00 => "WebKit",
+        0x1F01 => "WebKit WebGL",
+        0x1F02 => "WebGL 1.0 (OpenGL ES 2.0 Chromium)",
+        0x8B8C => "WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)",
+        Extension.Type.WEBGL_debug_renderer_info.UNMASKED_VENDOR_WEBGL => "Intel Inc.",
+        Extension.Type.WEBGL_debug_renderer_info.UNMASKED_RENDERER_WEBGL => "Intel Iris OpenGL Engine",
+        else => "",
+    };
 }
 
 /// Enables a WebGL extension.

@@ -15,8 +15,9 @@
   testing.expectEqual(true, validPlatforms.includes(navigator.platform));
   testing.expectEqual('en-US', navigator.language);
   testing.expectEqual(true, Array.isArray(navigator.languages));
-  testing.expectEqual(1, navigator.languages.length);
+  testing.expectEqual(2, navigator.languages.length);
   testing.expectEqual('en-US', navigator.languages[0]);
+  testing.expectEqual('en', navigator.languages[1]);
   testing.expectEqual(true, navigator.onLine);
   testing.expectEqual(true, navigator.cookieEnabled);
   testing.expectEqual(true, navigator.hardwareConcurrency > 0);
@@ -26,4 +27,14 @@
   testing.expectEqual('Gecko', navigator.product);
   testing.expectEqual(false, navigator.javaEnabled());
   testing.expectEqual(false, navigator.webdriver);
+  testing.expectEqual(true, !!window.chrome);
+  testing.expectEqual(true, !!window.chrome.runtime);
+  testing.expectEqual('function', typeof window.chrome.runtime.connect);
+  testing.expectEqual('function', typeof window.chrome.runtime.sendMessage);
+  testing.expectEqual(true, 'pdfViewerEnabled' in navigator);
+  testing.expectEqual(true, navigator.pdfViewerEnabled);
+  testing.expectEqual(5, navigator.plugins.length);
+  testing.expectEqual(2, navigator.mimeTypes.length);
+  testing.expectEqual('PDF Viewer', navigator.plugins[0].name);
+  testing.expectEqual('application/pdf', navigator.mimeTypes[0].type);
 </script>

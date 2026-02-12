@@ -764,6 +764,7 @@ pub const JsApis = flattenTypes(&.{
     @import("../webapi/cdata/CDATASection.zig"),
     @import("../webapi/cdata/ProcessingInstruction.zig"),
     @import("../webapi/collections.zig"),
+    @import("../webapi/Chrome.zig"),
     @import("../webapi/Console.zig"),
     @import("../webapi/Crypto.zig"),
     @import("../webapi/CSS.zig"),
